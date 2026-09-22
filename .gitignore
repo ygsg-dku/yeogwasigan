@@ -17,3 +17,12 @@ dist/
 build/
 target/
 .DS_Store
+
+# PowerPoint 임시 잠금 파일
+~$*
+
+# python venv
+.venv/
+
+# 스크래치에서 딸려온 구 SafeOut 덱 (이름·포지셔닝 무효)
+safeout-ppt/
