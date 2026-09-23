@@ -123,8 +123,18 @@ SRE가 AI에 붙여넣을 분량으로 줄인다. 모든 조건이 **같은 레�
 - **스위치 바꾸는 방식**: flagd를 재시작하지 않는다. 재시작하면 Go 서비스(checkout, product-catalog)가 옛 값을 계속 쓴다. 파일만 바꾸면 flagd가 스스로 감지하고 checkout도 1분 안에 따른다(확인함). `S0_normal`은 옛 방식으로 모아 checkout의 민감 필드(`user.email` 등)가 없다
 - **productCatalogFailure**: targeting 규칙("특정 상품이면 A, 아니면 off")이 defaultVariant를 덮는다. A를 바꿔야 켜진다(`pilot.py` 반영)
 - **수집 설정**: 스위치를 바꾸고 45초 기다린 뒤 180초 수집, 끄고 60초 회복. S5만 600초 — 부하 발생기 주소 9개 중 해외가 1개(캐나다)뿐이라 180초 창에는 해외 주문이 0건이었다. 순서는 S1, S2, S3, S5, S6, S4, 이어서 S6·S5 재수집. 장애가 안 난 첫 S5·S6은 `.실패_*` 폴더로 보관
-- **장애 확인**: 6개 모두 정상 대비 에러나 지연이 실제로 났다. 장애별 모습은 B·D가 커밋하기 전까지 대운 로컬 `FAULT_NOTES.local.md`에만 두고, 커밋 뒤 이 자리로 옮긴다
+- **장애 확인** (정상 대비):
+  - S1: payment ERROR 16건 `Payment request failed. Invalid token.`, checkout·frontend로 번짐
+  - S2: checkout ERROR 10건 `lookup badAddress ... server misbehaving` → `failed to charge card ... Unavailable`
+  - S3: 에러 없음. product-catalog `sql.conn.query` p95 16ms → 21.6초, 상품 목록 API 25ms → 28.9초
+  - S4: accounting ERROR 1,600건(상태 메시지 `23505`), fraud-detection `orders process` p95 1ms → 1초
+  - S5: 해외 주문 3건만 `/ship-order` 10초, 주문 전체가 10초 늦음. 나라 정보는 span 속성에는 없고, 주문 전체를 담은 로그 본문(`shippingAddress.country`, 주소 전체 포함)에만 있다
+  - S6: product-catalog ERROR 40건, 상품 `OLJCESPC7Z`만 실패
 - **주입 흔적 규칙 보강** (v1.1에 추가, 모든 조건에 똑같이):
-  - 통째로 뺀다: flagd를 부르는 span(`server.address`나 URL에 `flagd`·`flagservice`·`ofrep`), 본문이나 속성에 스위치 이름·`feature flag`·`FeatureFlag`·`feature_flag`가 들어간 **로그**.
-  - 문구만 지운다: 장애 자체인 에러 **span**은 남기고 메시지 안의 스위치 문구만 지운다.
+  - 통째로 뺀다: flagd를 부르는 span(`server.address`나 URL에 `flagd`·`flagservice`·`ofrep`), 본문이나 속성에 스위치 이름·`feature flag`·`FeatureFlag`·`feature_flag`가 들어간 **로그**. 예: fraud-detection `FeatureFlag 'kafkaQueueProblems' is enabled, sleeping 1 second`(S4, 183건), shipping `Delaying international shipment due to intlShippingSlowdown feature flag`(S5)
+  - 문구만 지운다: 장애 자체인 에러 **span**은 남기고 메시지 안의 스위치 문구만 지운다. 예: `Error: Product Catalog Fail Feature Flag Enabled` → `Error: Product Catalog Fail`(S6)
 - **load-generator 제외**: 부하 발생기는 진단 대상이 아니다. 우리가 뺀 챗봇 서비스(`agent`)를 부르다 실패한 ERROR가 정상 로그를 포함한 모든 수집에 찍힌다. 사건 추출에서 모든 조건 똑같이 뺀다
+
+**v1.4 (9/23, 공개 범위)**
+- 대운 결정: B·D도 커밋 전에 장애 로그와 위 "장애 확인"을 볼 수 있다. v1.3의 "커밋 전까지 보내지 않는다"를 대체한다
+- 목록·판정 키워드가 관찰한 장애에 맞춰질 수 있다. 결과를 보고할 때 "목록은 장애를 보기 전에 정했다"고 주장하지 않고 한계로 적는다

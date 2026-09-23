@@ -1,6 +1,6 @@
 # 로그 보는 법 (여과시간 Pilot)
 
-5주차 Pilot에서 쓰는 OpenTelemetry Demo 로그를 읽는 법이다. 장애 로그는 B의 목록과 D의 판정 키워드가 커밋된 뒤에 공유한다.
+5주차 Pilot에서 쓰는 OpenTelemetry Demo 로그를 읽는 법이다. 로그 파일은 드라이브로 공유한다 (레포에는 너무 커서 없다).
 
 ## 폴더 구성
 
