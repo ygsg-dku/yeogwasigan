@@ -26,3 +26,8 @@ target/
 
 # 스크래치에서 딸려온 구 SafeOut 덱 (이름·포지셔닝 무효)
 safeout-ppt/
+
+# pilot 실험 — 데모 클론과 원시 텔레메트리는 크고 재생성 가능
+experiments/pilot/otel-demo/
+experiments/pilot/telemetry/
+experiments/pilot/*.log

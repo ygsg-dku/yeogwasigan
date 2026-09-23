@@ -1,0 +1,33 @@
+# Pilot 수집용 collector extras.
+# 데모 본체 설정은 건드리지 않고, 데모가 열어둔 extras 자리에 꽂는다.
+#
+# raw      : redaction 이전. 서비스가 보낸 그대로 (resource 보강만)
+# redacted : 데모 레퍼런스 파이프라인 통과 후 (transform/redact_sensitive_data + redaction)
+#
+# 같은 otlp receiver를 두 파이프라인이 나눠 받는다. 차이는 redaction 유무 하나.
+
+exporters:
+  file/raw:
+    path: /pilot/raw.jsonl
+    format: json
+    flush_interval: 1s
+  file/redacted:
+    path: /pilot/redacted.jsonl
+    format: json
+    flush_interval: 1s
+
+service:
+  pipelines:
+    traces/raw:
+      receivers: [otlp]
+      processors: [resource_detection, memory_limiter]
+      exporters: [file/raw]
+    logs/raw:
+      receivers: [otlp]
+      processors: [resource_detection, memory_limiter]
+      exporters: [file/raw]
+    # 업스트림 파이프라인에 file/redacted만 추가. 배열은 교체되므로 기존 exporter를 다시 적는다.
+    traces:
+      exporters: [debug, span_metrics, file/redacted]
+    logs:
+      exporters: [debug, file/redacted]
