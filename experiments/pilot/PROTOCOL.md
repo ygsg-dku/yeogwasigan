@@ -132,6 +132,7 @@ SRE가 AI에 붙여넣을 분량으로 줄인다. 모든 조건이 **같은 레�
   - S6: product-catalog ERROR 40건, 상품 `OLJCESPC7Z`만 실패
 - **주입 흔적 규칙 보강** (v1.1에 추가, 모든 조건에 똑같이):
   - 통째로 뺀다: flagd를 부르는 span(`server.address`나 URL에 `flagd`·`flagservice`·`ofrep`), 본문이나 속성에 스위치 이름·`feature flag`·`FeatureFlag`·`feature_flag`가 들어간 **로그**. 예: fraud-detection `FeatureFlag 'kafkaQueueProblems' is enabled, sleeping 1 second`(S4, 183건), shipping `Delaying international shipment due to intlShippingSlowdown feature flag`(S5)
+  - 통째로 뺀다: 이름이 `feature_flag.`로 시작하는 span **이벤트**(예: `feature_flag.evaluation`). 스위치를 확인할 때마다 붙고 안에 스위치 이름(`paymentUnreachable` 등)이 적혀 있다. 속성만 지우면 빈 이벤트 제목이 남는다
   - 문구만 지운다: 장애 자체인 에러 **span**은 남기고 메시지 안의 스위치 문구만 지운다. 예: `Error: Product Catalog Fail Feature Flag Enabled` → `Error: Product Catalog Fail`(S6)
 - **load-generator 제외**: 부하 발생기는 진단 대상이 아니다. 우리가 뺀 챗봇 서비스(`agent`)를 부르다 실패한 ERROR가 정상 로그를 포함한 모든 수집에 찍힌다. 사건 추출에서 모든 조건 똑같이 뺀다
 
