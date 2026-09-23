@@ -1,0 +1,5 @@
+# collector에 수집 폴더만 추가로 마운트한다. 나머지는 데모 원본 그대로.
+services:
+  otel-collector:
+    volumes:
+      - ../telemetry:/pilot
