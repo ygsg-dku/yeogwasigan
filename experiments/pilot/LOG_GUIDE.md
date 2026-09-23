@@ -1,6 +1,10 @@
 # 로그 보는 법 (여과시간 Pilot)
 
-5주차 Pilot에서 쓰는 OpenTelemetry Demo 로그를 읽는 법이다. 로그 파일은 드라이브로 공유한다 (레포에는 너무 커서 없다).
+5주차 Pilot에서 쓰는 OpenTelemetry Demo 로그를 읽는 법이다. 로그는 레포에 압축(`.jsonl.gz`)으로 올라가 있다. 쓰기 전에 풀어서 쓴다:
+
+```bash
+gunzip -k experiments/pilot/scenarios/*/*.jsonl.gz
+```
 
 ## 폴더 구성
 
