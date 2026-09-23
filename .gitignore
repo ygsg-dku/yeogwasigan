@@ -31,3 +31,8 @@ safeout-ppt/
 experiments/pilot/otel-demo/
 experiments/pilot/telemetry/
 experiments/pilot/*.log
+# 수집한 로그는 드라이브로 공유(시나리오당 수십 MB). fields.md·window.json 같은 작은 파일만 git에
+experiments/pilot/scenarios/**/*.jsonl
+# B·D가 목록·키워드를 커밋하기 전까지 올리면 안 되는 장애별 메모
+experiments/pilot/*.local.md
+__pycache__/
