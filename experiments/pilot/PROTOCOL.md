@@ -103,6 +103,7 @@ SRE가 AI에 붙여넣을 분량으로 줄인다. 모든 조건이 **같은 레�
 - `redaction` 프로세서는 `allowed_keys`로 허용 목록(담기) 설정이 가능하지만, 레퍼런스 설정은 `allow_all_keys: true`(빼기)를 쓴다
 - 데모의 빼기는 **trace에만** 걸려 있고 log 파이프라인에는 없다
 - `emitRawPii`가 켜지면 payment가 `demo.payment.card_number`, `demo.payment.card_cvv`를, checkout이 `user.email`을 span 속성으로 보낸다. 데모 redaction은 이 세 키를 정확히 알고 처리한다
+- **스위치가 일부 서비스에 안 먹음 (S0_normal, 9/23)**: `emitRawPii=on`으로 5분 모았더니 payment는 카드번호·CVV를 14번 남겼지만 checkout은 `user.email`을 한 번도 남기지 않았다. 그동안 주문은 들어왔고, checkout 코드는 이 스위치가 켜지면 `user.email`을 붙인다(`src/checkout/main.go:313`). 원인 추정: `pilot.py flag`가 flagd를 재시작하는데, Go 서비스(checkout, product-catalog)의 flagd 클라이언트가 재시작 뒤에도 옛 값을 쓴다. checkout은 S2·S4, product-catalog는 S3·S6 스위치를 읽는다. **장애 수집 전에 스위치가 실제로 먹는지 확인한다**
 
 ## 변경 이력
 
@@ -111,3 +112,19 @@ SRE가 AI에 붙여넣을 분량으로 줄인다. 모든 조건이 **같은 레�
 - **민감 키 정의**(누출 측정용): 카드(`demo.payment.card_number`, `demo.payment.card_cvv`, `lastFourDigits`), 식별자(`user.id`, `session.id`, `user.email`, `demo.order.id`, `demo.shipping.tracking.id`, `transactionId`, `transaction_id`, `tracking_id`). 원문 추출본에서 이 키들의 값(6자 이상)을 모아, 각 패키지 문자열에 그대로 들어 있는 개수를 센다
 - **채점 2단계**: 서비스 적중(어느 부품이 문제인지) / 원인 적중(무엇 때문인지). 정규식은 `scenarios.json`
 - 목록(`lists.json`)과 판정 키워드(`scenarios.json`)를 **같은 작성자**가 썼다. 독립성은 "장애 로그를 보기 전에 커밋"이라는 순서로만 확보한다. 판정 키워드는 로그가 아니라 데모 플래그 설명과 소스에서 뽑았다
+
+**v1.2 (5주차 역할 분담 확정)**
+- 목록은 B, 판정 키워드는 D가 **서로 보지 않고** 새로 쓴다. 장애 로그 공유 전에 각각 커밋한다
+- v1.1 초안(`lists.json`, `scenarios.json`)은 같은 작성자가 쓴 것이라 push 전에 git 이력에서 뺐다(9/23). B·D는 초안을 볼 수 없다
+- 로그 수집·공유와 AI 호출 실행은 대운이 한 계정으로 한다. 조건마다 모델·계정이 달라지지 않게 하기 위해서다
+
+**v1.3 (9/23, 장애 로그 수집)**
+- **순서 변경**: 장애 로그를 목록·판정 키워드 커밋 **전에** 모았다(대운 결정, 5주차 일정 때문). 대신 B·D에게는 각자 커밋하기 전까지 장애 로그와 아래 "장애 확인" 내용을 보내지 않고, 누가 언제 무엇을 받았는지 기록한다. "목록이 먼저"를 git 이력으로 보일 수 없게 된 것은 한계로 보고한다
+- **스위치 바꾸는 방식**: flagd를 재시작하지 않는다. 재시작하면 Go 서비스(checkout, product-catalog)가 옛 값을 계속 쓴다. 파일만 바꾸면 flagd가 스스로 감지하고 checkout도 1분 안에 따른다(확인함). `S0_normal`은 옛 방식으로 모아 checkout의 민감 필드(`user.email` 등)가 없다
+- **productCatalogFailure**: targeting 규칙("특정 상품이면 A, 아니면 off")이 defaultVariant를 덮는다. A를 바꿔야 켜진다(`pilot.py` 반영)
+- **수집 설정**: 스위치를 바꾸고 45초 기다린 뒤 180초 수집, 끄고 60초 회복. S5만 600초 — 부하 발생기 주소 9개 중 해외가 1개(캐나다)뿐이라 180초 창에는 해외 주문이 0건이었다. 순서는 S1, S2, S3, S5, S6, S4, 이어서 S6·S5 재수집. 장애가 안 난 첫 S5·S6은 `.실패_*` 폴더로 보관
+- **장애 확인**: 6개 모두 정상 대비 에러나 지연이 실제로 났다. 장애별 모습은 B·D가 커밋하기 전까지 대운 로컬 `FAULT_NOTES.local.md`에만 두고, 커밋 뒤 이 자리로 옮긴다
+- **주입 흔적 규칙 보강** (v1.1에 추가, 모든 조건에 똑같이):
+  - 통째로 뺀다: flagd를 부르는 span(`server.address`나 URL에 `flagd`·`flagservice`·`ofrep`), 본문이나 속성에 스위치 이름·`feature flag`·`FeatureFlag`·`feature_flag`가 들어간 **로그**.
+  - 문구만 지운다: 장애 자체인 에러 **span**은 남기고 메시지 안의 스위치 문구만 지운다.
+- **load-generator 제외**: 부하 발생기는 진단 대상이 아니다. 우리가 뺀 챗봇 서비스(`agent`)를 부르다 실패한 ERROR가 정상 로그를 포함한 모든 수집에 찍힌다. 사건 추출에서 모든 조건 똑같이 뺀다
