@@ -32,7 +32,7 @@ S3_productCatalogLockContention, S4_kafkaQueueProblems, S5_intlShippingSlowdown,
 2. 크기가 너무 크다. 로그만 2,183~11,720건, 270만~1,490만 자. AI 컨텍스트 한도를 훨씬 넘으므로 장애 구간 자르기 등 공통 전처리가 필요하다(세 조건에 똑같이 적용).
 3. 정답 노출: S3 body "lock contention scenario active...", S4 body "FeatureFlag 'kafkaQueueProblems' is enabled", S5 body "...due to intlShippingSlowdown feature flag".
    body는 담기도 보내므로 이대로면 세 방식이 똑같이 정답을 맞힌다. S1·S2는 노출 없음.
-   S6은 `exception.message` 속성에만 "Product Catalog Fail Feature Flag Enabled" → 담기에서 빠지는 자연스러운 함정 케이스.
+   S6은 `exception.message` 속성에만 "Product Catalog Fail Feature Flag Enabled" → PROTOCOL v1.3 에 따라 문구만 지움("Product Catalog Fail").
    `S0_normal/fields.md`에 "장애 스위치 흔적(flagd·flagd-ui, feature_flag.*)은 모든 조건에서 뺀다"고 적혀 있으나 아직 적용 안 됨.
 4. 로그에는 민감정보가 거의 없다(Docker 내부 IP 172.18.x, userId 정도). 이메일·카드번호·CVV는 span에만 있다 → 민감정보 주입 + injected_pii.yaml 필요.
 5. redacted.jsonl = Collector redaction 처리본. 로그는 raw와 동일, span만 다름(카드 마스킹, user.email→user.hash, cvv 삭제).
@@ -49,8 +49,18 @@ S3_productCatalogLockContention, S4_kafkaQueueProblems, S5_intlShippingSlowdown,
      웹 데모: [공통 전처리] 체크 시 같은 Preprocessor 적용(요청 필드 preprocess). 1M자 넘는 업로드는 편집창에 안 넣고 자동 체크.
      /api/analyze 는 추정 토큰이 상한을 넘으면 AI 호출 전에 400. Jackson 문자열 한도 2억 자(JacksonConfig).
    - 결과: `scenarios/<ID>/raw.jsonl` + `preprocess_report.json`. raw.jsonl 은 원본(캡스톤/scenarios)을 이미 180초 창으로 자른 것.
-   - 남음: ③ 정답 노출 제거(S3·S4·S5 해당 레코드 통째 삭제 권장, S6 exception.message 는 함정으로 유지), ④ 민감정보 주입,
-     truth.yaml 에 "꼭 남아야 할 증거" 적고 전처리 후 자동 검사.
+   - ③ 주입 흔적 제거 완료 — 팀 기준 `experiments/pilot/PROTOCOL.md` v1.3 을 따름 (설정 strip-phrases / drop-if-contains, 대소문자 구분):
+     S6 `" Feature Flag Enabled"` 문구만 삭제(38건 ×2 속성), S4 FeatureFlag 로그 199+1건·S5 스위치 로그 6건 통째 삭제.
+     스위치 속성 키 삭제는 통째 삭제 판정 뒤에(그 전에 지우면 흔적 로그를 놓침).
+     ⚠ S3 "lock contention scenario active…"(4건)는 PROTOCOL 규칙에 안 걸려 남아 있음 → 팀 결정 필요.
+     S6 은 문구 삭제로 더 이상 담기 함정이 아님. 자연스러운 함정은 S2(`badAddress`가 exception.message 에만).
+   - ④ 민감정보 주입 완료 (PROTOCOL v1.1 민감 키, 6자 이상). 적용 순서 ① → ③ → ② → ④ → ⑤.
+     원문 span(`SpanPiiExtractor`)·로그의 민감 키 값 중 결과에 이미 있는 값 = 자연 발생, span 에만 있던 값은
+     같은 traceId 로그(같은 서비스 우선)에 키마다 속성/본문 번갈아 최대 5개 주입 → `scenarios/<ID>/injected_pii.yaml`.
+     시나리오별 민감값 22~70개. 필터만 돌린 잔존(회): S1 그대로 44 / 담기 7, S6 198 / 43.
+     담기 잔존은 본문에 들어간 UUID(session.id·user.id·order.id)를 정규식 내부검사가 못 잡아서 — 실제 한계로 측정됨.
+     카드번호·이메일은 담기에서 0. CVV·lastFourDigits 는 6자 미만이라 PROTOCOL 기준대로 제외.
+   - 남음: truth.yaml 에 "꼭 남아야 할 증거" 적고 전처리 후 자동 검사.
 3. 시나리오마다 `truth.yaml`, `injected_pii.yaml` 작성
    - 리허설(2026-09-25, results/20260925_192043, 그대로+담기, 1회, ③④ 없음): S2도 함정 케이스였다 —
      정답 단서 `badAddress`가 exception.message/stacktrace 에만 있어 담기는 Kafka로 오답. S6도 예상대로 담기 오답.

@@ -1,0 +1,222 @@
+# S0_normal — 전처리 ④ 가 만든 민감값 목록 (자동 생성, 직접 고치지 말 것)
+# ResidualScorer 가 결과물(AI 로 실제 전송되는 텍스트)에서 value 를 문자열 검색으로 센다.
+# type 은 PROTOCOL v1.1 민감 키 이름. description 이 '자연 발생'이면 원본 로그에 원래 있던 값,
+# '주입'이면 같은 traceId 의 span 에만 있던 값을 로그에 옮겨 넣은 것이다.
+items:
+- id: PII-001
+  type: user.id
+  value: 79395aa5-c54b-46db-9b9c-407aba521fb4
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-002
+  type: user.id
+  value: ba956df4-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-003
+  type: session.id
+  value: 385b5f26-6224-422a-88f3-6852eb1859b4
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-004
+  type: session.id
+  value: 5bc6fe3a-3731-4593-a70c-f296c53cc2c9
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-005
+  type: user.id
+  value: bdd5290a-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-006
+  type: user.id
+  value: bddbf794-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-007
+  type: demo.order.id
+  value: bddd5caf-b725-11f1-a7a4-0242ac120015
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-008
+  type: demo.shipping.tracking.id
+  value: 2bfd9ca2-3168-4607-8336-5248dc5e52d2
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-009
+  type: user.id
+  value: c04524e2-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-010
+  type: demo.order.id
+  value: c0540015-b725-11f1-a7a4-0242ac120015
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-011
+  type: demo.shipping.tracking.id
+  value: 526055e2-4363-41ca-97e5-a680c32f9d14
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-012
+  type: user.id
+  value: c517e5e0-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-013
+  type: demo.order.id
+  value: c52a0a4d-b725-11f1-a7a4-0242ac120015
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-014
+  type: demo.shipping.tracking.id
+  value: 82495093-c42e-4449-aece-a97f50f3134b
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-015
+  type: user.id
+  value: c8a74e6c-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-016
+  type: demo.order.id
+  value: c8af6e60-b725-11f1-a7a4-0242ac120015
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-017
+  type: demo.shipping.tracking.id
+  value: 4a416d78-a41a-45ee-8d12-913fa6884c66
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-018
+  type: user.id
+  value: dc7d1296-b725-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-019
+  type: demo.order.id
+  value: dc8332ff-b725-11f1-a7a4-0242ac120015
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-020
+  type: demo.shipping.tracking.id
+  value: 6d88eb0d-e51e-41d4-b24f-2de6075a79f3
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-021
+  type: session.id
+  value: f94be055-f974-410d-a460-61c75f7aa325
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-022
+  type: user.id
+  value: 67cc0dca-b726-11f1-b884-0242ac120017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-023
+  type: demo.order.id
+  value: 67da5552-b726-11f1-a7a4-0242ac120015
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-024
+  type: demo.shipping.tracking.id
+  value: 13a4ea93-e110-416f-9cdd-9c99eac5d6cf
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-025
+  type: transaction_id
+  value: 3d14b47a-136a-4011-9782-a8576c598461
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-026
+  type: transaction_id
+  value: 25a9b693-d635-40a7-8bdc-68aa80e3613d
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-027
+  type: transaction_id
+  value: a1df7544-e7a3-4a08-b666-ea96355eb88e
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-028
+  type: transaction_id
+  value: dd26a22d-b21e-46ca-b5c0-dcdb211e043b
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-029
+  type: transaction_id
+  value: 53a7f9cd-3c3d-46fd-8b2b-259ef17be74b
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-030
+  type: transaction_id
+  value: 85d9ede7-1628-4c9f-9d70-eb8ee8006cff
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-031
+  type: demo.payment.card_number
+  value: 4916-0816-6217-7968
+  description: '주입: logRecord.attributes.demo.payment.card_number ← span(payment,
+    traceId 14a526adc6dde0beada401c5a014687f)'
+- id: PII-032
+  type: demo.payment.card_number
+  value: 4432-8015-6152-0454
+  description: '주입: logRecord.body ← span(payment, traceId ba35b34a6c80e1c120fd35a4c9d67ac8)'
+- id: PII-033
+  type: user.id
+  value: c1b0d376-b725-11f1-b884-0242ac120017
+  description: '주입: logRecord.attributes.user.id ← span(load-generator, traceId a181dcc2fbc13a5838cf2ec2194c5bd4)'
+- id: PII-034
+  type: session.id
+  value: 3c89358d-0c62-44fd-8834-ad4e47b4a60c
+  description: '주입: logRecord.attributes.session.id ← span(frontend-web, traceId c629cdd7676280b52c79924a340bd541)'
+- id: PII-035
+  type: session.id
+  value: 78d18d01-8e0f-45ad-b2fd-c91a3de1346b
+  description: '주입: logRecord.body ← span(frontend-web, traceId 3e514b292465066b844cfac3cf9bf206)'
+- id: PII-036
+  type: demo.payment.card_number
+  value: 4485-4803-8707-3547
+  description: '주입: logRecord.attributes.demo.payment.card_number ← span(payment,
+    traceId b9ce73ba43b1f44568489df1aa40f6d5)'
+- id: PII-037
+  type: session.id
+  value: d7fe2229-c4ee-411f-bbf1-96150b9d8073
+  description: '주입: logRecord.attributes.session.id ← span(frontend-web, traceId 4b1804d0399cc21427526ee99849c3a9)'
+- id: PII-038
+  type: user.id
+  value: ca3f689a-b725-11f1-b884-0242ac120017
+  description: '주입: logRecord.body ← span(load-generator, traceId 26e651fe376f0ff17fa6b7d427a4c1ae)'
+- id: PII-039
+  type: session.id
+  value: db4e93be-3a23-4ae0-afe6-435b9514edd9
+  description: '주입: logRecord.body ← span(frontend-web, traceId 0ebfa047fd4f66c8af892cc60d07318e)'
+- id: PII-040
+  type: session.id
+  value: a45fadcf-35bd-415c-9675-0126adaf9120
+  description: '주입: logRecord.attributes.session.id ← span(frontend-web, traceId a40e80328947068a01de052309c6044f)'
+- id: PII-041
+  type: user.id
+  value: d1c0ad9a-b725-11f1-b884-0242ac120017
+  description: '주입: logRecord.attributes.user.id ← span(load-generator, traceId 8eacd03ed3bec7c395c959ab05645b2e)'
+- id: PII-042
+  type: demo.payment.card_number
+  value: 4539-1103-5661-7083
+  description: '주입: logRecord.body ← span(payment, traceId 68ca1bb8dc15164b35a8bc1b70fa52b0)'
+- id: PII-043
+  type: user.id
+  value: ea7e2600-b725-11f1-b884-0242ac120017
+  description: '주입: logRecord.body ← span(load-generator, traceId acbd03e3e4a2c75140e0de58568224ee)'
+- id: PII-044
+  type: demo.order.id
+  value: ea931d85-b725-11f1-a7a4-0242ac120015
+  description: '주입: logRecord.attributes.demo.order.id ← span(checkout, traceId acbd03e3e4a2c75140e0de58568224ee)'
+- id: PII-045
+  type: demo.shipping.tracking.id
+  value: af9e654a-eaf9-4353-9b03-dfce78a46146
+  description: '주입: logRecord.attributes.demo.shipping.tracking.id ← span(checkout,
+    traceId acbd03e3e4a2c75140e0de58568224ee)'
+- id: PII-046
+  type: user.id
+  value: ea9b74e4-b725-11f1-b884-0242ac120017
+  description: '주입: logRecord.attributes.user.id ← span(load-generator, traceId b1032378e4ab3bc02f96978117e524e9)'
+- id: PII-047
+  type: demo.order.id
+  value: 0ca55fd1-b726-11f1-a7a4-0242ac120015
+  description: '주입: logRecord.body ← span(checkout, traceId 97c46ffa9b4f60e17bfda7132eea2137)'
+- id: PII-048
+  type: demo.shipping.tracking.id
+  value: c7371420-3a68-433a-ae92-e21624269cba
+  description: '주입: logRecord.body ← span(checkout, traceId 97c46ffa9b4f60e17bfda7132eea2137)'
+- id: PII-049
+  type: demo.order.id
+  value: 292e5754-b726-11f1-a7a4-0242ac120015
+  description: '주입: logRecord.attributes.demo.order.id ← span(checkout, traceId 9c9f49d4cb5a10350684c305a6abe7d3)'
+- id: PII-050
+  type: demo.shipping.tracking.id
+  value: f2f6fae2-b9e7-4b2f-b8fc-729ab2343adf
+  description: '주입: logRecord.attributes.demo.shipping.tracking.id ← span(checkout,
+    traceId 9c9f49d4cb5a10350684c305a6abe7d3)'
+- id: PII-051
+  type: demo.payment.card_number
+  value: 4929-6495-8333-3657
+  description: '주입: logRecord.attributes.demo.payment.card_number ← span(payment,
+    traceId 9c9f49d4cb5a10350684c305a6abe7d3)'
+- id: PII-052
+  type: demo.order.id
+  value: 2ace250d-b726-11f1-a7a4-0242ac120015
+  description: '주입: logRecord.body ← span(checkout, traceId ed0de570cdfa56e95c329143968b4973)'
+- id: PII-053
+  type: demo.shipping.tracking.id
+  value: 725a8c3e-338c-49a2-86c9-42caadc6ede3
+  description: '주입: logRecord.body ← span(checkout, traceId ed0de570cdfa56e95c329143968b4973)'

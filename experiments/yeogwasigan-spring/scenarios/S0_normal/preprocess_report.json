@@ -5,11 +5,16 @@
     "sourceDir" : "../../scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
-    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
+    "stripPhrases" : [ " Feature Flag Enabled" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
+    "piiKeys" : [ "demo.payment.card_number", "demo.payment.card_cvv", "lastFourDigits", "user.id", "session.id", "user.email", "demo.order.id", "demo.shipping.tracking.id", "transactionId", "transaction_id", "tracking_id" ],
+    "piiMinLength" : 6,
+    "piiMaxPerKey" : 5,
     "maxInputTokens" : 250000
   },
   "inputRecords" : 5318,
@@ -19,6 +24,11 @@
       "otelcol-contrib" : 801
     },
     "droppedByBodyContains" : 53,
+    "remainingRecords" : 3972
+  },
+  "step3_removeInjectionTraces" : {
+    "strippedValuesByPhrase" : { },
+    "droppedByTerm" : { },
     "removedAttributeKeys" : { },
     "remainingRecords" : 3972
   },
@@ -30,11 +40,36 @@
     "maxProxyDurationMs" : 535,
     "topGroupsBefore" : [ "1573x frontend-proxy |  | GET | - | 200 | <envoy access log>", "554x product-catalog | 9 |  |  |  | Product Found", "182x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "165x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "116x product-catalog | 9 |  |  |  | Found # products from database", "106x currency | 9 |  |  |  | conversion successful", "98x frontend | 9 | GET | /api/cart | 200 | API request completed", "91x frontend | 9 | GET | /api/recommendations | 200 | API request completed" ]
   },
+  "step4_injectPii" : {
+    "candidateValues" : 106,
+    "naturalByKey" : {
+      "demo.order.id" : 6,
+      "demo.shipping.tracking.id" : 6,
+      "session.id" : 3,
+      "transaction_id" : 6,
+      "user.id" : 9
+    },
+    "injectedByKey" : {
+      "demo.order.id" : 4,
+      "demo.payment.card_number" : 5,
+      "demo.shipping.tracking.id" : 4,
+      "session.id" : 5,
+      "user.id" : 5
+    },
+    "noMatchingLogByKey" : {
+      "demo.order.id" : 12,
+      "demo.payment.card_number" : 1,
+      "demo.shipping.tracking.id" : 4,
+      "session.id" : 193,
+      "user.id" : 12
+    },
+    "totalPii" : 53
+  },
   "step5_size" : {
     "outputRecords" : 404,
-    "distinctFields" : 101,
-    "chars" : 598360,
-    "estimatedTokensPassthrough" : 149590,
+    "distinctFields" : 104,
+    "chars" : 599558,
+    "estimatedTokensPassthrough" : 149890,
     "maxInputTokens" : 250000
   }
 }

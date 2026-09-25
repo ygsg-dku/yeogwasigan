@@ -1,6 +1,7 @@
 package com.capstone.yeogwasigan.web;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,11 +21,13 @@ import com.capstone.yeogwasigan.core.filter.FilterResult;
 import com.capstone.yeogwasigan.core.filter.LogFilter;
 import com.capstone.yeogwasigan.core.log.LogFormat;
 import com.capstone.yeogwasigan.core.presidio.PresidioClient;
+import com.capstone.yeogwasigan.core.scenario.PiiItem;
 import com.capstone.yeogwasigan.core.scenario.ScenarioRepository;
 import com.capstone.yeogwasigan.core.scoring.ResidualScorer;
 import com.capstone.yeogwasigan.core.template.TemplateLoader;
 import com.capstone.yeogwasigan.preprocess.PreprocessProperties;
 import com.capstone.yeogwasigan.preprocess.Preprocessor;
+import com.capstone.yeogwasigan.preprocess.SpanPiiExtractor;
 import com.capstone.yeogwasigan.web.dto.AnalyzeRequest;
 import com.capstone.yeogwasigan.web.dto.AnalyzeResponse;
 import com.capstone.yeogwasigan.web.dto.CompareRow;
@@ -131,13 +134,18 @@ public class AnalyzeController {
         LogFilter filter = filters.get(req.filter());       // 알 수 없는 필터면 400
         List<Map<String, Object>> logs = LogFormat.parse(req.log());
         Map<String, Object> preprocessSummary = null;
+        List<PiiItem> piiForScoring = scenarios.allPii();
         if (req.preprocess()) {
             // 실험(preprocess 프로파일)과 같은 Preprocessor·같은 규칙
-            Preprocessor.Result pre = new Preprocessor(preprocessProps).apply(logs);
+            Preprocessor.Result pre = new Preprocessor(preprocessProps).apply(logs,
+                    SpanPiiExtractor.extract(req.log(), new HashSet<>(preprocessProps.piiKeys())));
             logs = pre.records();
             preprocessSummary = new LinkedHashMap<>();
             preprocessSummary.put("inputRecords", pre.report().get("inputRecords"));
             preprocessSummary.put("outputRecords", logs.size());
+            preprocessSummary.put("pii", pre.pii().size());
+            piiForScoring = new ArrayList<>(scenarios.allPii());
+            piiForScoring.addAll(pre.pii());   // 올린 파일에서 새로 넣은 값도 잔존 수에 포함
         }
         FilterResult result = filter.apply(logs, req.caseId(), req.purpose());
         Map<String, Object> notes = result.notes();
@@ -145,7 +153,7 @@ public class AnalyzeController {
             notes = new LinkedHashMap<>(notes);
             notes.put("preprocess", preprocessSummary);
         }
-        ResidualScorer.ResidualResult residual = scorer.score(result.output(), scenarios.allPii());
+        ResidualScorer.ResidualResult residual = scorer.score(result.output(), piiForScoring);
         return new AnalyzeResponse(
                 filter.name(),
                 filter.label(),

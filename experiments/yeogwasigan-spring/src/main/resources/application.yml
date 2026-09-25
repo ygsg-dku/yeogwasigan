@@ -57,13 +57,47 @@ yeogwasigan:
 
     # ① 실험 장비 로그 제거
     exclude-services: [load-generator, otelcol-contrib, flagd, flagd-ui]   # 가짜 트래픽 발생기, 수집기 자체 로그, 장애 스위치
-    exclude-attribute-prefixes: [feature_flag]                              # feature_flag.key, feature_flag_key 등
+    exclude-attribute-prefixes: [feature_flag, demo.feature_flag.]          # PROTOCOL v1.1. feature_flag.key, feature_flag_key 등
     exclude-body-contains: ["/flagservice/"]                                # 프록시를 거친 flagd 호출 접속 로그
+
+    # ③ 주입 흔적 제거 (experiments/pilot/PROTOCOL.md v1.3 "주입 흔적 규칙 보강"). 대소문자 구분
+    # 문구만 지운다: 장애 자체인 에러는 남기고 스위치 문구만 뺀다 (S6 "Error: Product Catalog Fail Feature Flag Enabled" → "Error: Product Catalog Fail")
+    strip-phrases: [" Feature Flag Enabled"]
+    # 통째로 뺀다: logRecord 의 body·속성(키 또는 값)에 아래 문자열이 있으면 레코드 삭제 (문구 삭제 뒤에 판정)
+    drop-if-contains:
+      - feature flag            # S5 shipping "…due to intlShippingSlowdown feature flag"
+      - FeatureFlag             # S4 fraud-detection "FeatureFlag 'kafkaQueueProblems' is enabled…"
+      - feature_flag            # feature_flag_key 등 스위치 속성이 붙은 로그
+      # 파일럿 시나리오의 스위치 이름 (pilot.py 로 켠 flagd 플래그)
+      - paymentFailure
+      - paymentUnreachable
+      - productCatalogFailure
+      - kafkaQueueProblems
+      - intlShippingSlowdown
+      - emitRawPii
 
     # ② 반복 로그 줄이기 (WARN 이상·HTTP 5xx 는 항상 전부 남긴다)
     keep-first: 5
     keep-last: 1
     keep-slowest: 3
+
+    # ④ 민감정보 주입 (PROTOCOL v1.1 "민감 키 정의"). 로그에는 민감값이 거의 없고 span 에만 있으므로,
+    #    같은 수집의 span 에 실제로 있던 값을 traceId 가 같은 로그로 옮겨 넣는다. 넣는 자리는 키마다 속성/본문 번갈아.
+    #    원본 로그에 이미 있던 값은 "자연 발생"으로 같이 센다. 결과: scenarios/<ID>/injected_pii.yaml
+    pii-keys:
+      - demo.payment.card_number
+      - demo.payment.card_cvv        # 3자리라 pii-min-length 에 걸려 실제로는 세지 않는다 (PROTOCOL 기준 그대로)
+      - lastFourDigits               # 4자리 — 위와 같음
+      - user.id
+      - session.id
+      - user.email
+      - demo.order.id
+      - demo.shipping.tracking.id
+      - transactionId
+      - transaction_id
+      - tracking_id
+    pii-min-length: 6                # PROTOCOL v1.1: 값 6자 이상
+    pii-max-per-key: 5               # 키마다 새로 넣는 값 최대 개수 (시나리오 간 개수 차이 완화)
 
     # ⑤ '그대로' 기준 추정 토큰 상한 (gpt-5.1 입력 한도 약 27만 토큰보다 여유 있게)
     max-input-tokens: 250000
