@@ -1,0 +1,44 @@
+{
+  "scenario" : "S4_kafkaQueueProblems",
+  "source" : "/Users/junsu/Desktop/DKU/3학년/2학기/캡스톤/scenarios/S4_kafkaQueueProblems/raw.jsonl",
+  "rules" : {
+    "sourceDir" : "../../scenarios",
+    "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
+    "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
+    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeBodyContains" : [ "/flagservice/" ],
+    "keepFirst" : 5,
+    "keepLast" : 1,
+    "keepSlowest" : 3,
+    "maxInputTokens" : 250000
+  },
+  "inputRecords" : 7197,
+  "step1_excludeTestEquipment" : {
+    "droppedByService" : {
+      "load-generator" : 328,
+      "otelcol-contrib" : 498
+    },
+    "droppedByBodyContains" : 37,
+    "removedAttributeKeys" : {
+      "feature_flag_key" : 1,
+      "feature_flag_provider_name" : 1,
+      "feature_flag_variant" : 1
+    },
+    "remainingRecords" : 6334
+  },
+  "step2_reduceRepeats" : {
+    "groups" : 75,
+    "keptImportant(WARN+/5xx)" : 0,
+    "keptTotal" : 405,
+    "droppedRepeats" : 5929,
+    "maxProxyDurationMs" : 342,
+    "topGroupsBefore" : [ "1616x accounting | 9 |  |  |  | Order details: {@OrderResult}.", "1600x accounting | 9 |  |  |  | Duplicate order received, skipping.", "1012x frontend-proxy |  | GET | - | 200 | <envoy access log>", "385x product-catalog | 9 |  |  |  | Product Found", "183x fraud-detection | 9 |  |  |  | Consumed record with orderId: *, and updated total count to: #", "183x fraud-detection | 9 |  |  |  | FeatureFlag 'kafkaQueueProblems' is enabled, sleeping # second", "128x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "124x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']" ]
+  },
+  "step5_size" : {
+    "outputRecords" : 405,
+    "distinctFields" : 101,
+    "chars" : 587220,
+    "estimatedTokensPassthrough" : 146805,
+    "maxInputTokens" : 250000
+  }
+}

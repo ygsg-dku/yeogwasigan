@@ -1,0 +1,75 @@
+# 여과시간 설정
+# - 기본 프로파일: 웹 데모 (http://localhost:8080)
+# - experiment 프로파일: 실험 일괄 실행 후 종료 (application-experiment.yml)
+# - blind 프로파일: 블라인드 채점 파일 생성/병합 후 종료 (application-blind.yml)
+
+spring:
+  application:
+    name: yeogwasigan
+  main:
+    banner-mode: off
+  config:
+    # bootRun / java -jar 로 호스트에서 실행할 때도 프로젝트 루트의 .env(API 키 등)를 읽는다.
+    # 컨테이너에는 .env 가 없으므로(.dockerignore) docker-compose 의 environment 값이 쓰인다.
+    import: optional:file:.env[.properties]
+
+server:
+  port: 8080
+
+yeogwasigan:
+  # 프로젝트 루트 기준 상대경로 (bootRun 은 프로젝트 루트에서 실행된다)
+  scenarios-dir: scenarios
+  results-dir: results
+
+  presidio:
+    # 호스트에서 bootRun 할 때는 docker-compose 가 열어 둔 5002/5001 포트로,
+    # 컨테이너로 실행할 때는 docker-compose 의 환경변수(컨테이너 이름:3000)로 연결된다.
+    analyzer-url: ${PRESIDIO_ANALYZER_URL:http://localhost:5002}
+    anonymizer-url: ${PRESIDIO_ANONYMIZER_URL:http://localhost:5001}
+    language: en            # Presidio 기본 지원 언어. 한국어 모델은 기본 제공되지 않는다.
+    timeout: 30s
+    # [B] 빼기에서 검사를 건너뛸 필드 경로. 기본값은 "없음"(= 모든 필드 검사).
+    # Presidio 기본 설정은 timeUnixNano·버전 문자열을 <DATE_TIME> 등으로 과잉 마스킹할 수 있다.
+    # 그것도 빼기 방식의 실제 특성이므로 기본은 비워 둔다. 바꾸려면 "실험 시작 전에" 정하고 끝까지 유지할 것.
+    #   예) [logRecord.timeUnixNano, logRecord.observedTimeUnixNano, logRecord.traceId, logRecord.spanId, logRecord.parentSpanId]
+    skip-fields: []
+
+  ai:
+    provider: ${YG_AI_PROVIDER:anthropic}      # anthropic | openai
+    model: ${YG_AI_MODEL:}                      # 비우면 제공자별 기본 모델 (AiClient 참고). 실험 기간 동안 고정할 것
+    max-tokens: ${YG_AI_MAX_TOKENS:1024}
+    timeout: 120s
+    mock: ${YG_AI_MOCK:false}                   # true 면 API 키가 있어도 mock 모드
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    openai-api-key: ${OPENAI_API_KEY:}
+    # temperature 는 설정으로 바꿀 수 없다. 코드에서 0 으로 고정 (ExperimentConstants.TEMPERATURE)
+
+  experiment:
+    runs: 3                                     # 조건별 반복 횟수 (AI 응답 흔들림 보정)
+    scenarios: []                               # 비우면 scenarios/ 아래 전체
+    filters: [PASSTHROUGH, DENYLIST, ALLOWLIST]
+    presidio-wait: 120s                         # 빼기 조건 실행 전 Presidio 준비를 기다리는 최대 시간
+
+  # 공통 전처리 규칙. 실험(preprocess 프로파일)과 웹 데모의 [공통 전처리] 옵션이 같은 규칙을 쓴다.
+  # 세 조건에 똑같이 적용되므로 실험 시작 전에 정하고 끝까지 유지할 것. 대상 시나리오 목록은 application-preprocess.yml.
+  preprocess:
+    source-dir: ../../scenarios
+
+    # ① 실험 장비 로그 제거
+    exclude-services: [load-generator, otelcol-contrib, flagd, flagd-ui]   # 가짜 트래픽 발생기, 수집기 자체 로그, 장애 스위치
+    exclude-attribute-prefixes: [feature_flag]                              # feature_flag.key, feature_flag_key 등
+    exclude-body-contains: ["/flagservice/"]                                # 프록시를 거친 flagd 호출 접속 로그
+
+    # ② 반복 로그 줄이기 (WARN 이상·HTTP 5xx 는 항상 전부 남긴다)
+    keep-first: 5
+    keep-last: 1
+    keep-slowest: 3
+
+    # ⑤ '그대로' 기준 추정 토큰 상한 (gpt-5.1 입력 한도 약 27만 토큰보다 여유 있게)
+    max-input-tokens: 250000
+
+  blind:
+    action: prepare                             # prepare | merge
+    results:                                    # 대상 results.csv 경로 (필수)
+    seed:                                       # 재현용 시드. 비우면 매번 다르게 섞인다
+    normalize: true                             # 응답 안의 토큰·마스킹 표식·민감값을 [가림]으로 바꿀지

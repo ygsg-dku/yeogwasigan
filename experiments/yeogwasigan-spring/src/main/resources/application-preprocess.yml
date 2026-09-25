@@ -1,0 +1,23 @@
+# 공통 전처리 프로파일: 웹 서버를 띄우지 않고 PreprocessRunner 만 실행한 뒤 종료한다.
+#   ./gradlew bootRun --args='--spring.profiles.active=preprocess'
+#   ./gradlew bootRun --args='--spring.profiles.active=preprocess --yeogwasigan.preprocess.scenarios=S1_paymentFailure'
+#
+# 세 조건(그대로/빼기/담기)에 똑같이 적용되는 단계다. 규칙은 실험 시작 전에 정하고 끝까지 유지할 것.
+# 현재 단계: ① 실험 장비 로그 제거, ② 반복 로그 줄이기, ⑤ 크기 확인.  (③ 정답 노출 제거, ④ 민감정보 주입은 아직 없음)
+spring:
+  main:
+    web-application-type: none
+
+yeogwasigan:
+  preprocess:
+    # S0_baseline 은 마지막 줄이 잘려 있어 제외, 이름에 ".실패_" 가 붙은 폴더는 수집 실패분이라 제외
+    scenarios:
+      - S0_normal
+      - S1_paymentFailure
+      - S2_paymentUnreachable
+      - S3_productCatalogLockContention
+      - S4_kafkaQueueProblems
+      - S5_intlShippingSlowdown
+      - S6_productCatalogFailure
+
+    # 전처리 규칙(①②⑤)은 웹 데모와 같이 쓰도록 application.yml 의 yeogwasigan.preprocess 에 있다.

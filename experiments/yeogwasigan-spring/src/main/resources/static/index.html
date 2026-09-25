@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>여과시간</title>
+<style>
+  /* 흑백 위주 미니멀. 상태 구분은 색이 아니라 굵기·테두리·반전으로 한다. */
+  :root {
+    --ink: #000;
+    --paper: #fff;
+    --g1: #f4f4f4;   /* 옅은 면 */
+    --g2: #d9d9d9;   /* 선 */
+    --g3: #8a8a8a;   /* 보조 글자 */
+    --g4: #555;      /* 본문 보조 */
+    --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, "D2Coding", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
+  body { font-family: var(--sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+           border-bottom: 3px solid var(--ink); padding-bottom: 14px; }
+  header h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -0.02em; }
+  header .sub { color: var(--g4); font-size: 14px; margin-top: 2px; }
+  .status { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .badge { font-family: var(--mono); font-size: 12px; border: 1px solid var(--ink); padding: 4px 8px; white-space: nowrap; }
+  .badge.off { border-style: dashed; color: var(--g4); }
+
+  section { padding: 26px 0; border-bottom: 1px solid var(--g2); }
+  section:last-of-type { border-bottom: 0; }
+  h2 { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; margin: 0 0 12px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+
+  button, .btn { font: inherit; font-size: 14px; cursor: pointer; background: var(--paper); color: var(--ink);
+                 border: 1px solid var(--ink); padding: 7px 14px; border-radius: 0; }
+  button:hover, .btn:hover { background: var(--g1); }
+  button:focus-visible, select:focus-visible, textarea:focus-visible, .seg input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+  button.primary { background: var(--ink); color: var(--paper); font-weight: 800; padding: 10px 26px; font-size: 15px; }
+  button.primary:hover { background: #222; }
+  button:disabled { opacity: .45; cursor: default; }
+  input[type=file] { display: none; }
+
+  textarea { width: 100%; height: 260px; margin-top: 10px; resize: vertical; font-family: var(--mono); font-size: 12.5px;
+             line-height: 1.5; border: 1px solid var(--ink); padding: 12px; background: var(--paper); color: var(--ink); white-space: pre; }
+  .hint { font-size: 12.5px; color: var(--g3); margin-top: 6px; min-height: 18px; }
+  .hint.err { color: var(--ink); font-weight: 800; }
+  .hint.err::before { content: "■ "; }
+
+  .controls { display: grid; grid-template-columns: 56px 1fr; gap: 12px 12px; align-items: center; margin-top: 18px; }
+  .controls .k { font-weight: 800; font-size: 14px; }
+  select { font: inherit; font-size: 14px; border: 1px solid var(--ink); padding: 7px 10px; background: var(--paper); color: var(--ink); border-radius: 0; }
+
+  /* 방식 선택: 세그먼트. 선택된 것은 반전(검정 바탕). */
+  .seg { display: inline-flex; border: 1px solid var(--ink); }
+  .seg label { position: relative; cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; padding: 8px 20px; font-size: 14px; border-right: 1px solid var(--ink); user-select: none; }
+  .seg label:last-child span { border-right: 0; }
+  .seg span small { color: var(--g3); font-family: var(--mono); font-size: 11px; margin-left: 4px; }
+  .seg input:checked + span { background: var(--ink); color: var(--paper); font-weight: 800; }
+  .chk { display: inline-flex; align-items: center; gap: 6px; margin-left: 14px; font-size: 13.5px; cursor: pointer; }
+  .chk input { accent-color: var(--ink); width: 15px; height: 15px; }
+  .seg input:checked + span small { color: #bbb; }
+
+  .question { margin-top: 14px; font-size: 12.5px; color: var(--g4); border-left: 3px solid var(--g2); padding: 2px 0 2px 10px; }
+  .question b { color: var(--ink); }
+
+  /* ── 실제로 나간 것 (핵심 패널) ─────────────────────────── */
+  #sent { border: 3px solid var(--ink); padding: 22px 22px 18px; margin-top: 26px; }
+  #sent h2 { font-size: 20px; letter-spacing: -0.01em; margin: 0; }
+  .method-tag { display: inline-block; font-size: 13px; font-weight: 800; background: var(--ink); color: var(--paper); padding: 2px 8px; margin-left: 8px; vertical-align: 3px; }
+  .stats { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: end; margin: 14px 0 16px; }
+  .big { font-weight: 900; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .fields .big { font-size: 56px; }
+  .fields .from { color: var(--g3); font-weight: 700; }
+  .fields .arrow { color: var(--g3); font-weight: 400; margin: 0 6px; }
+  .fields .unit { font-size: 18px; font-weight: 700; margin-left: 2px; }
+  .cap { font-size: 12px; color: var(--g3); margin-top: 6px; }
+  .residual { text-align: right; }
+  .residual .box { display: inline-block; border: 3px solid var(--ink); padding: 10px 16px 8px; }
+  .residual .box.hot { background: var(--ink); color: var(--paper); }
+  .residual .label { font-size: 13px; font-weight: 800; }
+  .residual .big { font-size: 44px; }
+  .residual .unit { font-size: 18px; font-weight: 700; margin-left: 2px; }
+
+  /* 세 방식 비교 줄 */
+  .compare { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--ink); margin-bottom: 16px; }
+  .compare button { border: 0; border-right: 1px solid var(--ink); text-align: left; padding: 10px 12px; font-size: 13px; }
+  .compare button:last-child { border-right: 0; }
+  .compare button .n { font-family: var(--mono); font-size: 12px; color: var(--g4); display: block; margin-top: 2px; }
+  .compare button.on { background: var(--ink); color: var(--paper); font-weight: 800; }
+  .compare button.on .n { color: #ccc; }
+
+  .output { border: 1px solid var(--ink); max-height: 520px; overflow: auto; background: var(--paper); }
+  .rec { border-bottom: 1px solid var(--g2); padding: 10px 14px; font-family: var(--mono); font-size: 12.5px; }
+  .rec:last-child { border-bottom: 0; }
+  .rec .rh { font-family: var(--sans); font-size: 12px; font-weight: 800; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+  .rec .rh .sev { border: 1px solid var(--ink); padding: 0 5px; font-family: var(--mono); font-weight: 700; font-size: 11px; }
+  .rec .rh .sev.ERROR, .rec .rh .sev.FATAL { background: var(--ink); color: var(--paper); }
+  .rec .rh .sev.WARN { border-width: 2px; }
+  .kv { display: grid; grid-template-columns: minmax(180px, 34%) 1fr; gap: 12px; padding: 1px 0; }
+  .kv .k { color: var(--g4); overflow-wrap: anywhere; }
+  .kv .k .layer { color: var(--g3); }
+  .kv .v { overflow-wrap: anywhere; white-space: pre-wrap; }
+  .kv.body .v { font-weight: 700; }
+  mark { background: var(--ink); color: var(--paper); padding: 0 2px; font-weight: 800; }   /* 남아 있는 민감값 = 반전 */
+  .tok { border: 1px dashed var(--ink); padding: 0 2px; }                                  /* 토큰/마스킹 = 점선 테두리 */
+  .empty { padding: 28px; text-align: center; color: var(--g3); font-family: var(--sans); }
+  .empty.err { color: var(--ink); font-weight: 800; text-align: left; border-left: 6px solid var(--ink); }
+
+  .sub-block { margin-top: 16px; }
+  .sub-block h3 { font-size: 13px; font-weight: 800; margin: 0 0 6px; }
+  .sub-block h3 .cnt { font-family: var(--mono); font-weight: 700; margin-left: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-family: var(--mono); font-size: 11.5px; border: 1px solid var(--g2); padding: 1px 6px; color: var(--g4); text-decoration: line-through; }
+  .chip.pii { border: 2px solid var(--ink); color: var(--ink); text-decoration: none; font-weight: 700; }
+  .none { color: var(--g3); font-size: 13px; }
+
+  /* ── AI 응답 ─────────────────────────── */
+  #ai .answer { border: 1px solid var(--ink); padding: 16px 18px; white-space: pre-wrap; font-size: 15px; line-height: 1.7; min-height: 72px; }
+  #ai .answer.stale { color: var(--g3); border-style: dashed; }
+  #ai .meta { font-family: var(--mono); font-size: 12px; color: var(--g3); margin-top: 6px; }
+  .loading::after { content: " …"; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 20px 16px 60px; }
+    header { flex-direction: column; align-items: flex-start; }
+    .status { justify-content: flex-start; }
+    .stats { grid-template-columns: 1fr; }
+    .residual { text-align: left; }
+    .fields .big { font-size: 42px; }
+    .kv { grid-template-columns: 1fr; gap: 0; }
+    .seg span { padding: 8px 12px; }
+    .compare { grid-template-columns: 1fr; }
+    .compare button { border-right: 0; border-bottom: 1px solid var(--ink); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>여과시간</h1>
+      <div class="sub">내부 장애 로그를 외부 AI로 보내기 전, 무엇이 나가는지 확인합니다</div>
+    </div>
+    <div class="status">
+      <div id="presidioStatus" class="badge off">Presidio: 확인 중</div>
+      <div id="aiStatus" class="badge off">AI: 확인 중</div>
+    </div>
+  </header>
+
+  <!-- 1. 입력 -->
+  <section>
+    <div class="row">
+      <h2 style="margin:0">로그 입력</h2>
+      <span class="spacer"></span>
+      <label class="btn" for="fileInput">파일 업로드</label>
+      <input id="fileInput" type="file" accept=".jsonl,.json,.txt,.log">
+      <select id="sampleSelect" aria-label="샘플 선택"></select>
+      <button id="sampleBtn" type="button">샘플 불러오기</button>
+    </div>
+    <textarea id="log" spellcheck="false" aria-label="로그 (JSONL, 직접 수정 가능)"
+      placeholder='한 줄에 로그 레코드 하나 (JSONL). resource / scope / logRecord 3층 구조 또는 OTLP resourceLogs 형식.'></textarea>
+    <div id="logHint" class="hint">직접 수정할 수 있습니다. 필드를 지우면 결과가 바로 다시 계산됩니다.</div>
+
+    <div class="controls">
+      <label class="k" for="purpose">목적</label>
+      <div><select id="purpose"></select></div>
+      <span class="k">방식</span>
+      <div class="row">
+        <div class="seg" role="radiogroup" aria-label="필터 방식">
+          <label><input type="radio" name="filter" value="PASSTHROUGH"><span>그대로<small>A</small></span></label>
+          <label><input type="radio" name="filter" value="DENYLIST"><span>빼기<small>B</small></span></label>
+          <label><input type="radio" name="filter" value="ALLOWLIST" checked><span>담기<small>C</small></span></label>
+        </div>
+        <label class="chk" title="실험과 같은 규칙: 실험 장비 로그 제거 + 반복 로그 줄이기. 원본 수집 로그를 올릴 때 켜세요.">
+          <input type="checkbox" id="preprocess"> 공통 전처리 (실험과 동일)
+        </label>
+        <span class="spacer"></span>
+        <button id="analyzeBtn" class="primary" type="button">분석 요청</button>
+      </div>
+    </div>
+    <div class="question">세 방식 공통 질문 · <b id="question"></b></div>
+
+    <!-- 2. 실제로 나간 것 -->
+    <div id="sent" aria-live="polite">
+      <h2>실제로 나간 것<span id="methodTag" class="method-tag">담기</span></h2>
+      <div class="stats">
+        <div class="fields">
+          <div><span class="big from" id="fBefore">–</span><span class="unit from">개</span><span class="big arrow">→</span><span class="big" id="fAfter">–</span><span class="unit">개 필드</span></div>
+          <div class="cap" id="recCap">원본의 서로 다른 필드 수 → 외부로 나간 필드 수</div>
+        </div>
+        <div class="residual">
+          <div class="box" id="residualBox">
+            <div class="label">민감값 잔존</div>
+            <div><span class="big" id="residual">–</span><span class="unit">건</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="compare" id="compare" aria-label="세 방식 비교">
+        <button type="button" data-f="PASSTHROUGH">그대로<span class="n">–</span></button>
+        <button type="button" data-f="DENYLIST">빼기<span class="n">–</span></button>
+        <button type="button" data-f="ALLOWLIST">담기<span class="n">–</span></button>
+      </div>
+
+      <div class="output" id="output"><div class="empty">샘플을 불러오거나 로그를 붙여 넣으세요.</div></div>
+
+      <div class="sub-block">
+        <h3>버려진 필드<span class="cnt" id="droppedCnt"></span></h3>
+        <div class="chips" id="dropped"><span class="none">–</span></div>
+      </div>
+      <div class="sub-block">
+        <h3>남아 있는 민감값<span class="cnt" id="residualCnt"></span></h3>
+        <div class="chips" id="residualList"><span class="none">–</span></div>
+      </div>
+      <div class="cap" style="margin-top:14px">
+        <mark>반전</mark> = 원본 민감값이 그대로 나감 · <span class="tok">점선</span> = 토큰/마스킹으로 바뀐 값 · 잔존 수는 scenarios/*/injected_pii.yaml 에 등록된 값을 단순 문자열 검색한 결과
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. AI 응답 -->
+  <section id="ai">
+    <h2>AI 응답</h2>
+    <div class="answer" id="answer"><span class="none">[분석 요청]을 누르면 위의 "실제로 나간 것"만 외부 AI로 전송됩니다.</span></div>
+    <div class="meta" id="answerMeta"></div>
+  </section>
+</div>
+
+<script>
+// 데모 UI — 프레임워크 없음. 서버 API: /api/meta, /api/sample/{id}, /api/filter, /api/compare, /api/analyze
+const $ = (id) => document.getElementById(id);
+const state = { purpose: "INCIDENT_ANALYSIS", lastAnswerKey: null, bigLog: null };
+// 이보다 큰 파일은 편집창에 넣지 않고 메모리에만 들고 있다 (수십 MB 를 textarea 에 넣으면 브라우저가 멈춘다)
+const BIG_LOG_CHARS = 1_000_000;
+const LOG_PLACEHOLDER = $("log").placeholder;
+const currentLog = () => state.bigLog ?? $("log").value;
+
+const currentFilter = () => document.querySelector('input[name=filter]:checked').value;
+const requestBody = (filter) => ({
+  log: currentLog(),
+  preprocess: $("preprocess").checked,
+  purpose: $("purpose").value || state.purpose,
+  filter: filter || currentFilter(),
+  caseId: $("sampleSelect").value || "demo",
+});
+const keyOf = () => {
+  const b = requestBody();
+  if (state.bigLog) b.log = `big:${state.bigLog.length}`;   // 수십 MB 를 매번 문자열화하지 않는다
+  return JSON.stringify(b);
+};
+
+async function api(path, body) {
+  const res = await fetch(path, body
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    : {});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.detail || `요청 실패 (${res.status})`);
+    err.status = res.status;   // 400 = 입력(로그) 오류, 503 = Presidio 연결 불가
+    throw err;
+  }
+  return data;
+}
+
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+// 값 표시: 토큰/마스킹은 점선, 남은 민감값은 반전
+function decorate(value, residualValues) {
+  let s = esc(typeof value === "string" ? value : JSON.stringify(value));
+  s = s.replace(/\b[A-Z][A-Z_]{1,24}_[0-9A-F]{8}\b/g, (m) => `<span class="tok">${m}</span>`)
+       .replace(/&lt;[A-Z][A-Z_]+&gt;/g, (m) => `<span class="tok">${m}</span>`);
+  for (const v of residualValues) {
+    const ev = esc(v);
+    s = s.split(ev).join(`<mark>${ev}</mark>`);
+  }
+  return s;
+}
+
+// 서버의 LogFormat.flatten 과 같은 규칙으로 필드 경로를 펼친다 (표시용)
+function flatten(rec) {
+  const out = [];
+  for (const layer of ["resource", "scope", "logRecord"]) {
+    for (const [k, v] of Object.entries(rec[layer] || {})) {
+      if (k === "attributes" && layer !== "resource" && v && typeof v === "object") {
+        for (const [ak, av] of Object.entries(v)) out.push([`${layer}.attributes.`, ak, av]);
+      } else out.push([`${layer}.`, k, v]);
+    }
+  }
+  return out;
+}
+
+function countUp(el, to) {
+  const from = parseInt(el.textContent, 10);
+  if (isNaN(from) || from === to) { el.textContent = to; return; }
+  const t0 = performance.now(), dur = 320;
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / dur);
+    el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function renderFilterResult(r) {
+  $("methodTag").textContent = r.filterLabel;
+  countUp($("fBefore"), r.fieldsBefore);
+  countUp($("fAfter"), r.fieldsAfter);
+  countUp($("residual"), r.residualCount);
+  $("residualBox").classList.toggle("hot", r.residualCount > 0);
+  const pre = (r.notes || {}).preprocess;
+  $("recCap").textContent = (pre ? `공통 전처리 ${pre.inputRecords.toLocaleString()}건 → ${pre.outputRecords.toLocaleString()}건 · ` : "")
+    + `레코드 ${r.output.length}건 · 원본의 서로 다른 필드 수 → 외부로 나간 필드 수`;
+
+  const detail = r.residualDetail || [];
+  const residualValues = detail.map((d) => d.value).sort((a, b) => b.length - a.length);
+  $("output").innerHTML = r.output.length ? r.output.map((rec, i) => {
+    const lr = rec.logRecord || {};
+    const svc = (rec.resource || {})["service.name"];
+    const sev = lr.severityText;
+    const rows = flatten(rec).map(([layer, k, v]) =>
+      `<div class="kv${k === "body" ? " body" : ""}"><div class="k"><span class="layer">${esc(layer)}</span>${esc(k)}</div><div class="v">${decorate(v, residualValues)}</div></div>`).join("");
+    return `<div class="rec"><div class="rh"><span>#${i + 1}</span>${svc ? `<span>${decorate(svc, residualValues)}</span>` : ""}${sev ? `<span class="sev ${esc(sev)}">${esc(sev)}</span>` : ""}</div>${rows}</div>`;
+  }).join("") : `<div class="empty">나간 레코드가 없습니다.</div>`;
+
+  $("droppedCnt").textContent = r.droppedFields.length ? `${r.droppedFields.length}개` : "";
+  $("dropped").innerHTML = r.droppedFields.length
+    ? r.droppedFields.map((f) => `<span class="chip">${esc(f)}</span>`).join("")
+    : `<span class="none">없음 — 모든 필드가 나갔습니다.</span>`;
+
+  $("residualCnt").textContent = detail.length ? `${detail.length}종` : "";
+  $("residualList").innerHTML = detail.length
+    ? detail.map((d) => `<span class="chip pii">${esc(d.value)} ×${d.count} · ${esc(d.type)}</span>`).join("")
+    : `<span class="none">등록된 민감값이 하나도 남아 있지 않습니다.</span>`;
+
+  highlightCompare(r.filter);
+  markAnswerStale();
+}
+
+// 필터 실패(예: Presidio 준비 전 빼기) — 원본을 대신 보여주지 않고 오류만 표시한다
+function renderFilterError(filter, message) {
+  $("methodTag").textContent = { PASSTHROUGH: "그대로", DENYLIST: "빼기", ALLOWLIST: "담기" }[filter] || filter;
+  ["fBefore", "fAfter", "residual"].forEach((id) => { $(id).textContent = "–"; });
+  $("residualBox").classList.remove("hot");
+  $("output").innerHTML = `<div class="empty err">${esc(message)}</div>`;
+  $("dropped").innerHTML = `<span class="none">–</span>`;
+  $("residualList").innerHTML = `<span class="none">–</span>`;
+  $("droppedCnt").textContent = $("residualCnt").textContent = "";
+  highlightCompare(filter);
+}
+
+function highlightCompare(filter) {
+  document.querySelectorAll("#compare button").forEach((b) => b.classList.toggle("on", b.dataset.f === filter));
+}
+
+function renderCompare(rows) {
+  for (const row of rows) {
+    const b = document.querySelector(`#compare button[data-f="${row.filter}"] .n`);
+    if (b) b.textContent = row.error ? "계산 불가" : `${row.fieldsAfter}개 필드 · 잔존 ${row.residualCount}건`;
+  }
+}
+
+function markAnswerStale() {
+  if (state.lastAnswerKey && state.lastAnswerKey !== keyOf()) {
+    $("answer").classList.add("stale");
+    $("answerMeta").textContent = "※ 이전 요청의 응답입니다. 입력이나 방식이 바뀌었으니 다시 [분석 요청]을 누르세요.";
+  }
+}
+
+let seq = 0;
+async function refresh({ compare = false } = {}) {
+  if (!currentLog().trim()) return;
+  const my = ++seq;
+  const filter = currentFilter();
+  const cmp = compare ? api("/api/compare", requestBody()).catch(() => null) : Promise.resolve(null);
+  try {
+    const r = await api("/api/filter", requestBody(filter));
+    if (my !== seq) return; // 더 최신 요청이 있으면 무시
+    $("logHint").className = "hint";
+    $("logHint").textContent = "직접 수정할 수 있습니다. 필드를 지우면 결과가 바로 다시 계산됩니다.";
+    renderFilterResult(r);
+  } catch (e) {
+    if (my !== seq) return;
+    if (e.status === 400) {
+      $("logHint").className = "hint err";
+      $("logHint").textContent = e.message;
+    } else {
+      renderFilterError(filter, e.message);
+    }
+  }
+  const c = await cmp;
+  if (c && my === seq) renderCompare(c.rows);
+}
+
+async function analyze() {
+  const btn = $("analyzeBtn");
+  btn.disabled = true;
+  $("answer").classList.remove("stale");
+  $("answer").innerHTML = `<span class="loading">AI 응답 대기 중</span>`;
+  $("answerMeta").textContent = "";
+  const key = keyOf();
+  try {
+    const r = await api("/api/analyze", requestBody());
+    renderFilterResult(r);
+    $("answer").textContent = r.aiAnswer;
+    state.lastAnswerKey = key;
+    $("answerMeta").textContent = `방식: ${r.filterLabel} · 모델: ${r.aiModel} · 모드: ${r.aiMode} · temperature 0`;
+  } catch (e) {
+    $("answer").textContent = `오류: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function loadSample() {
+  const id = $("sampleSelect").value;
+  if (!id) return;
+  const r = await api(`/api/sample/${encodeURIComponent(id)}`);
+  clearBigLog();
+  $("log").value = r.log.trim();
+  $("preprocess").checked = false;   // 샘플은 이미 전처리된 파일이다
+  refresh({ compare: true });
+}
+
+function clearBigLog() {
+  if (!state.bigLog) return;
+  state.bigLog = null;
+  $("log").placeholder = LOG_PLACEHOLDER;
+}
+
+// 이벤트
+document.querySelectorAll("input[name=filter]").forEach((el) => el.addEventListener("change", () => refresh()));
+$("compare").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-f]");
+  if (!b) return;
+  document.querySelector(`input[name=filter][value="${b.dataset.f}"]`).checked = true;
+  refresh();
+});
+let timer;
+$("log").addEventListener("input", () => { clearBigLog(); clearTimeout(timer); timer = setTimeout(() => refresh({ compare: true }), 500); });
+$("purpose").addEventListener("change", () => refresh({ compare: true }));
+$("preprocess").addEventListener("change", () => refresh({ compare: true }));
+$("sampleBtn").addEventListener("click", loadSample);
+$("analyzeBtn").addEventListener("click", analyze);
+$("fileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const text = String(reader.result).trim();
+    if (text.length > BIG_LOG_CHARS) {
+      state.bigLog = text;
+      $("log").value = "";
+      $("log").placeholder = `업로드한 파일: ${file.name} (${(file.size / 1048576).toFixed(1)}MB) — 너무 커서 편집창에는 표시하지 않습니다. `
+        + `여기에 직접 입력하면 업로드한 파일 대신 입력한 내용이 쓰입니다.`;
+      $("preprocess").checked = true;   // 원본 수집 로그는 전처리 없이는 AI 입력 한도를 넘는다
+    } else {
+      clearBigLog();
+      $("log").value = text;
+    }
+    refresh({ compare: true });
+  };
+  reader.readAsText(file, "utf-8");
+  e.target.value = "";
+});
+
+// 초기화
+(async () => {
+  try {
+    const m = await api("/api/meta");
+    $("purpose").innerHTML = m.purposes.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+    $("sampleSelect").innerHTML = m.samples.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    $("sampleSelect").style.display = m.samples.length > 1 ? "" : "none";
+    $("question").textContent = m.question;
+    $("aiStatus").textContent = `AI: ${m.aiMode === "live" ? m.aiModel : "mock 모드 (API 키 없음)"}`;
+    $("aiStatus").classList.toggle("off", m.aiMode !== "live");
+    $("presidioStatus").textContent = `Presidio: ${m.presidioUp ? "연결됨" : "연결 안 됨 — 빼기 불가"}`;
+    $("presidioStatus").classList.toggle("off", !m.presidioUp);
+    if (m.samples.length) await loadSample();
+  } catch (e) {
+    $("logHint").className = "hint err";
+    $("logHint").textContent = `서버에 연결할 수 없습니다: ${e.message}`;
+  }
+})();
+</script>
+</body>
+</html>

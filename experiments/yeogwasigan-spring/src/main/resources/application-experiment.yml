@@ -1,0 +1,6 @@
+# 실험 일괄 실행 프로파일: 웹 서버를 띄우지 않고 ExperimentRunner 만 실행한 뒤 종료한다.
+#   ./gradlew bootRun --args='--spring.profiles.active=experiment'
+#   ./gradlew bootRun --args='--spring.profiles.active=experiment --yeogwasigan.experiment.runs=1 --yeogwasigan.experiment.scenarios=s01_payment_fail'
+spring:
+  main:
+    web-application-type: none

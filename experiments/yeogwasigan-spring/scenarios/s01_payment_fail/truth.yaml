@@ -1,0 +1,55 @@
+# 정답지 — 블라인드 채점자가 참고한다. (AI에는 절대 전송하지 않는다)
+scenario_id: s01_payment_fail
+title: 결제 실패("Invalid token")가 checkout → frontend 로 연쇄 전파
+source: 합성 샘플 (OpenTelemetry Demo의 paymentFailure 기능 플래그 장애를 본뜸). 실제 수집 로그로 교체 예정.
+
+root_cause:
+  summary: >-
+    flagd 의 기능 플래그 paymentFailure 가 켜진 상태(variant 100%)라서,
+    payment 서비스가 결제(Charge) 요청을 의도적으로 실패시켰다.
+    "Invalid token" 은 플래그가 만들어 낸 증상 메시지일 뿐, 실제 인증 토큰 만료·오류가 아니다.
+  origin_service: payment
+  mechanism: 기능 플래그(장애 주입) → payment Charge 실패 → checkout PlaceOrder 실패 → frontend 500
+  propagation: [payment, checkout, frontend]
+  trace_id: 4bf92f3577b34da6a3ce929d0e0e4736
+
+# 근본 원인을 판단하는 데 필요한 근거 (raw.jsonl 줄 번호는 1부터)
+required_evidence:
+  - id: E1
+    what: payment 서비스 ERROR "Payment request failed. Invalid token." — 최초 오류 발생 지점
+    location: {line: 8, field: logRecord.body}
+    in_allowlist_fields: true
+  - id: E2
+    what: 같은 traceId 로 checkout(8→9줄) → frontend(10줄) ERROR 가 뒤따름 — 연쇄 전파
+    location: {lines: [8, 9, 10], field: logRecord.traceId / spanId / parentSpanId}
+    in_allowlist_fields: true
+  - id: E3
+    what: 오류 직전 payment 가 기능 플래그 paymentFailure 를 평가함 (variant=100%)
+    location: {line: 7, field: logRecord.attributes.feature_flag.key}
+    in_allowlist_fields: false   # ← 함정. body 는 "Feature flag evaluated" 뿐, 플래그 이름은 attributes 에만 있음
+  - id: E4
+    what: 약 1분 전 flagd 가 paymentFailure 플래그 설정을 갱신함 (defaultVariant=100%)
+    location: {line: 1, field: logRecord.attributes.flagd.flag.key}
+    in_allowlist_fields: false   # ← 함정. body 는 "Flag configuration reloaded" 뿐
+
+# 함정(담기가 실패할 수 있는 지점)
+trap:
+  description: >-
+    결정적 단서(플래그 이름 paymentFailure)가 INFO 레벨 로그의 attributes 에만 있고,
+    담기 템플릿의 requiredFields 에는 attributes 가 없다. 따라서 [C] 담기로 보내면
+    AI는 "Feature flag evaluated", "Flag configuration reloaded" 라는 막연한 문장만 보게 된다.
+    담기가 무조건 이기는 실험이 아님을 보이기 위한 장치.
+  affected_filters: [allowlist]
+
+# 오답 유도 요소
+distractors:
+  - 앞선 shipping 서비스의 WARN(지연 850ms) — 다른 traceId, 결제 실패와 무관
+  - '"Invalid token" 을 문자 그대로 읽어 "인증 토큰 만료/키 교체" 를 원인으로 단정하는 것'
+  - cart 서비스 INFO — 다른 traceId, 무관
+
+# 채점 기준 (rca_score, 0~3점)
+rca_rubric:
+  3: '기능 플래그 paymentFailure(장애 주입)를 근본 원인으로 지목하고, payment → checkout → frontend 전파를 근거로 설명'
+  2: '기능 플래그는 특정하지 못했지만, payment 서비스의 결제(토큰 검증) 실패를 발원지로 정확히 지목하고 전파 경로(같은 trace)를 근거로 설명'
+  1: 'payment 쪽 문제라고는 했으나 근거가 부족하거나 전파 방향을 잘못 설명(예: checkout 이 발원지)'
+  0: '무관한 원인(shipping 지연 등)을 지목하거나 판단 불가'
