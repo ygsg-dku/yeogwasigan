@@ -1,0 +1,38 @@
+# 여과시간 — 앱 + Presidio(analyzer / anonymizer) 컨테이너
+#
+#   docker compose up --build                 # 전부 컨테이너로 (웹 데모: http://localhost:8080)
+#   docker compose up -d presidio-analyzer presidio-anonymizer
+#                                             # Presidio 만 띄우고 앱은 ./gradlew bootRun 으로 실행
+#   docker compose run --rm app --spring.profiles.active=experiment
+#                                             # 컨테이너 안에서 실험 일괄 실행 (결과는 ./results 에 저장)
+#
+# API 키는 셸 환경변수나 같은 폴더의 .env 파일에서 읽는다. 없으면 mock 모드.
+services:
+  app:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      PRESIDIO_ANALYZER_URL: http://presidio-analyzer:3000
+      PRESIDIO_ANONYMIZER_URL: http://presidio-anonymizer:3000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      YG_AI_PROVIDER: ${YG_AI_PROVIDER:-anthropic}
+      YG_AI_MODEL: ${YG_AI_MODEL:-}
+      YG_AI_MOCK: ${YG_AI_MOCK:-false}
+    volumes:
+      - ./scenarios:/app/scenarios:ro     # 시나리오를 바꿔도 이미지를 다시 빌드할 필요 없음
+      - ./results:/app/results            # 실험 결과를 호스트에 남긴다
+    depends_on: [presidio-analyzer, presidio-anonymizer]
+
+  # Presidio 는 공식 이미지를 기본 설정 그대로 쓴다. (커스텀 인식기·설정 파일 없음)
+  # 컨테이너 내부 포트는 둘 다 3000. 호스트에서 bootRun 으로 앱을 돌릴 때를 위해 5002/5001 로 연다.
+  # 분석기는 시작할 때 spaCy 모델을 불러오므로 준비까지 30초~1분 정도 걸린다.
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    # platform: linux/amd64    # Apple Silicon 에서 "no matching manifest" 오류가 나면 주석 해제
+    ports: ["5002:3000"]
+
+  presidio-anonymizer:
+    image: mcr.microsoft.com/presidio-anonymizer:latest
+    # platform: linux/amd64
+    ports: ["5001:3000"]

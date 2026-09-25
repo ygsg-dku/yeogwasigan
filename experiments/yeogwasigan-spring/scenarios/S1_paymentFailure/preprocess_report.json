@@ -1,0 +1,40 @@
+{
+  "scenario" : "S1_paymentFailure",
+  "source" : "/Users/junsu/Desktop/DKU/3학년/2학기/캡스톤/scenarios/S1_paymentFailure/raw.jsonl",
+  "rules" : {
+    "sourceDir" : "../../scenarios",
+    "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
+    "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
+    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeBodyContains" : [ "/flagservice/" ],
+    "keepFirst" : 5,
+    "keepLast" : 1,
+    "keepSlowest" : 3,
+    "maxInputTokens" : 250000
+  },
+  "inputRecords" : 2335,
+  "step1_excludeTestEquipment" : {
+    "droppedByService" : {
+      "load-generator" : 252,
+      "otelcol-contrib" : 483
+    },
+    "droppedByBodyContains" : 18,
+    "removedAttributeKeys" : { },
+    "remainingRecords" : 1582
+  },
+  "step2_reduceRepeats" : {
+    "groups" : 62,
+    "keptImportant(WARN+/5xx)" : 8,
+    "keptTotal" : 313,
+    "droppedRepeats" : 1269,
+    "maxProxyDurationMs" : 183,
+    "topGroupsBefore" : [ "583x frontend-proxy |  | GET | - | 200 | <envoy access log>", "223x product-catalog | 9 |  |  |  | Product Found", "72x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "72x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "56x currency | 9 |  |  |  | conversion successful", "40x product-catalog | 9 |  |  |  | Found # products from database", "39x frontend | 9 | GET | /api/cart | 200 | API request completed", "36x frontend-proxy |  | - | - | 0 | <envoy access log>" ]
+  },
+  "step5_size" : {
+    "outputRecords" : 313,
+    "distinctFields" : 90,
+    "chars" : 483880,
+    "estimatedTokensPassthrough" : 120970,
+    "maxInputTokens" : 250000
+  }
+}

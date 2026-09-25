@@ -1,0 +1,6 @@
+# 블라인드 채점 프로파일: 웹 서버를 띄우지 않고 BlindRunner 만 실행한 뒤 종료한다.
+#   ./gradlew bootRun --args='--spring.profiles.active=blind --yeogwasigan.blind.action=prepare --yeogwasigan.blind.results=results/<실행시각>/results.csv'
+#   ./gradlew bootRun --args='--spring.profiles.active=blind --yeogwasigan.blind.action=merge   --yeogwasigan.blind.results=results/<실행시각>/results.csv'
+spring:
+  main:
+    web-application-type: none

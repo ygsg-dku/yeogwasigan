@@ -1,0 +1,129 @@
+# 주입한 민감정보 목록 — core/scoring/ResidualScorer 가 이 값들을 결과물에서 문자열 검색으로 센다.
+#
+# 규칙
+# - value     : 결과물(= AI로 실제 전송되는 텍스트)에서 그대로 검색할 원본 문자열
+# - locations : 원본 raw.jsonl 에서의 위치 (line 은 1부터). 채점에는 쓰이지 않고 설명·검증용
+# - kind      : 구조화 필드(키 이름으로 분류 가능) / 자유텍스트 안(키 이름으로 분류 불가 → innerScan 필요)
+#
+# 의도한 관찰 포인트
+# - PERSON_NAME(한글 이름), ACCOUNT_NUMBER(국내 계좌 형식)는 Presidio 기본 인식기가
+#   못 잡을 가능성이 높다 → [B] 빼기의 실제 한계를 측정
+# - body 자유텍스트 안의 이메일·계좌·이름 → [C] 담기에서 innerScan 이 필요한 이유
+#   (정규식 innerScan 도 한글 이름은 못 잡는다 → [C]의 한계도 함께 측정됨)
+items:
+- id: PII-01
+  type: ACCOUNT_NUMBER
+  description: 고객 계좌번호
+  value: 110-432-778812
+  locations:
+  - line: 6
+    field: logRecord.body
+    kind: 자유텍스트 안
+  - line: 8
+    field: logRecord.attributes.payment.account_number
+    kind: 구조화 필드(값 전체)
+- id: PII-02
+  type: EMAIL
+  description: 고객 이메일
+  value: minji.park@example.co.kr
+  locations:
+  - line: 3
+    field: logRecord.attributes.user.email
+    kind: 구조화 필드(값 전체)
+  - line: 4
+    field: logRecord.attributes.user.email
+    kind: 구조화 필드(값 전체)
+  - line: 6
+    field: logRecord.body
+    kind: 자유텍스트 안
+  - line: 9
+    field: logRecord.attributes.user.email
+    kind: 구조화 필드(값 전체)
+  - line: 10
+    field: logRecord.body
+    kind: 자유텍스트 안
+- id: PII-03
+  type: PERSON_NAME
+  description: 고객명(한글)
+  value: 박민지
+  locations:
+  - line: 4
+    field: logRecord.attributes.user.name
+    kind: 구조화 필드(값 전체)
+  - line: 6
+    field: logRecord.body
+    kind: 자유텍스트 안
+  - line: 8
+    field: logRecord.attributes.user.name
+    kind: 구조화 필드(값 전체)
+- id: PII-04
+  type: INTERNAL_IP
+  description: payment 파드 내부 IP
+  value: 10.20.31.45
+  locations:
+  - line: 6
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+  - line: 7
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+  - line: 8
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+  - line: 9
+    field: logRecord.body
+    kind: 자유텍스트 안
+- id: PII-05
+  type: INTERNAL_IP
+  description: frontend 파드 내부 IP
+  value: 10.20.12.8
+  locations:
+  - line: 3
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+  - line: 10
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+- id: PII-06
+  type: INTERNAL_IP
+  description: checkout 파드 내부 IP
+  value: 10.20.14.22
+  locations:
+  - line: 4
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+  - line: 9
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+- id: PII-07
+  type: INTERNAL_IP
+  description: currency 파드 내부 IP
+  value: 10.20.33.9
+  locations:
+  - line: 5
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+- id: PII-08
+  type: INTERNAL_IP
+  description: flagd 파드 내부 IP
+  value: 10.20.33.14
+  locations:
+  - line: 1
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+- id: PII-09
+  type: INTERNAL_IP
+  description: shipping 파드 내부 IP
+  value: 10.20.31.77
+  locations:
+  - line: 2
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)
+- id: PII-10
+  type: INTERNAL_IP
+  description: cart 파드 내부 IP
+  value: 10.20.12.31
+  locations:
+  - line: 11
+    field: resource.host.ip
+    kind: 구조화 필드(값 전체)

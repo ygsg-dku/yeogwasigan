@@ -1,0 +1,37 @@
+purposeId: INCIDENT_ANALYSIS
+displayName: 장애 원인 분석
+description: 장애 로그에서 근본 원인과 근거를 찾는다
+
+# 원인 규명에 필요한 필드만 담는다
+# (필드 이름은 OpenTelemetry 3층 구조 resource / scope / logRecord 기준)
+requiredFields:
+  - resource.service.name          # 어디서 터졌나
+  - logRecord.timeUnixNano         # 언제 / 순서
+  - logRecord.severityText         # 심각도
+  - logRecord.body                 # 무엇이 (단, 내부 재검사 필요)
+  - logRecord.traceId              # 같은 요청인가
+  - logRecord.spanId               # 호출 관계
+  - logRecord.parentSpanId
+
+# 담되, 값을 바꿔서 내보내는 필드.
+# ※ fieldActions 에 적힌 필드는 "변환해서 담는다"는 뜻이므로 requiredFields 에 없어도 담긴다.
+#   (그렇지 않으면 container.id / host.name 은 onUnknownField: DROP 으로 먼저 버려져서
+#    가명화 규칙이 적용될 일이 없다.)
+fieldActions:
+  resource.container.id: PSEUDONYMIZE_CASE_SCOPED
+  resource.host.name: PSEUDONYMIZE_CASE_SCOPED
+  logRecord.traceId: TOKENIZE_CASE_SCOPED
+  logRecord.spanId: TOKENIZE_CASE_SCOPED
+  # 원안에는 없던 줄: spanId 만 토큰화하고 parentSpanId 를 원문으로 두면
+  # "이 span 의 부모가 누구인가"를 잇는 연결이 끊긴다. 같은 토큰 공간을 쓰도록 추가.
+  logRecord.parentSpanId: TOKENIZE_CASE_SCOPED
+
+onUnknownField: DROP               # 목록에 없으면 버린다 (담기의 핵심)
+innerScanOnKeptFields: true        # 담은 필드 내부도 한 번 더 검사
+
+# 내부 재검사 엔진
+#   regex    : AllowlistFilter 의 정규식 (기본값, 원안)
+#   presidio : [B] 빼기와 똑같은 Presidio 기본 엔진
+# presidio 로 바꿔 돌리면 "담기의 이득이 필드 선택에서 오는지, 정규식에서 오는지"를
+# 분리해서 볼 수 있다. (README '실험 타당성 메모' 참고)
+innerScanEngine: regex
