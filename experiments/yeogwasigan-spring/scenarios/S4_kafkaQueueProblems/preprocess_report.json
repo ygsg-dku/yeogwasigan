@@ -5,11 +5,16 @@
     "sourceDir" : "../../scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
-    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
+    "stripPhrases" : [ " Feature Flag Enabled" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
+    "piiKeys" : [ "demo.payment.card_number", "demo.payment.card_cvv", "lastFourDigits", "user.id", "session.id", "user.email", "demo.order.id", "demo.shipping.tracking.id", "transactionId", "transaction_id", "tracking_id" ],
+    "piiMinLength" : 6,
+    "piiMaxPerKey" : 5,
     "maxInputTokens" : 250000
   },
   "inputRecords" : 7197,
@@ -19,26 +24,53 @@
       "otelcol-contrib" : 498
     },
     "droppedByBodyContains" : 37,
-    "removedAttributeKeys" : {
-      "feature_flag_key" : 1,
-      "feature_flag_provider_name" : 1,
-      "feature_flag_variant" : 1
-    },
     "remainingRecords" : 6334
   },
+  "step3_removeInjectionTraces" : {
+    "strippedValuesByPhrase" : { },
+    "droppedByTerm" : {
+      "FeatureFlag" : 199,
+      "feature_flag" : 1
+    },
+    "removedAttributeKeys" : { },
+    "remainingRecords" : 6134
+  },
   "step2_reduceRepeats" : {
-    "groups" : 75,
+    "groups" : 72,
     "keptImportant(WARN+/5xx)" : 0,
-    "keptTotal" : 405,
-    "droppedRepeats" : 5929,
+    "keptTotal" : 392,
+    "droppedRepeats" : 5742,
     "maxProxyDurationMs" : 342,
-    "topGroupsBefore" : [ "1616x accounting | 9 |  |  |  | Order details: {@OrderResult}.", "1600x accounting | 9 |  |  |  | Duplicate order received, skipping.", "1012x frontend-proxy |  | GET | - | 200 | <envoy access log>", "385x product-catalog | 9 |  |  |  | Product Found", "183x fraud-detection | 9 |  |  |  | Consumed record with orderId: *, and updated total count to: #", "183x fraud-detection | 9 |  |  |  | FeatureFlag 'kafkaQueueProblems' is enabled, sleeping # second", "128x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "124x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']" ]
+    "topGroupsBefore" : [ "1616x accounting | 9 |  |  |  | Order details: {@OrderResult}.", "1600x accounting | 9 |  |  |  | Duplicate order received, skipping.", "1012x frontend-proxy |  | GET | - | 200 | <envoy access log>", "385x product-catalog | 9 |  |  |  | Product Found", "183x fraud-detection | 9 |  |  |  | Consumed record with orderId: *, and updated total count to: #", "128x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "124x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "98x currency | 9 |  |  |  | conversion successful" ]
+  },
+  "step4_injectPii" : {
+    "candidateValues" : 110,
+    "naturalByKey" : {
+      "demo.order.id" : 6,
+      "demo.shipping.tracking.id" : 6,
+      "session.id" : 4,
+      "transaction_id" : 6,
+      "user.id" : 8
+    },
+    "injectedByKey" : {
+      "demo.order.id" : 5,
+      "demo.payment.card_number" : 5,
+      "demo.shipping.tracking.id" : 5,
+      "session.id" : 5,
+      "user.email" : 5,
+      "user.id" : 5
+    },
+    "noMatchingLogByKey" : {
+      "session.id" : 74,
+      "user.id" : 11
+    },
+    "totalPii" : 60
   },
   "step5_size" : {
-    "outputRecords" : 405,
-    "distinctFields" : 101,
-    "chars" : 587220,
-    "estimatedTokensPassthrough" : 146805,
+    "outputRecords" : 392,
+    "distinctFields" : 105,
+    "chars" : 573397,
+    "estimatedTokensPassthrough" : 143350,
     "maxInputTokens" : 250000
   }
 }

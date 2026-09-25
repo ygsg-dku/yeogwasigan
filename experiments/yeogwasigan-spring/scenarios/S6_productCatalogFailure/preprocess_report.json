@@ -5,11 +5,16 @@
     "sourceDir" : "../../scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
-    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
+    "stripPhrases" : [ " Feature Flag Enabled" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
+    "piiKeys" : [ "demo.payment.card_number", "demo.payment.card_cvv", "lastFourDigits", "user.id", "session.id", "user.email", "demo.order.id", "demo.shipping.tracking.id", "transactionId", "transaction_id", "tracking_id" ],
+    "piiMinLength" : 6,
+    "piiMaxPerKey" : 5,
     "maxInputTokens" : 250000
   },
   "inputRecords" : 3684,
@@ -19,6 +24,13 @@
       "otelcol-contrib" : 490
     },
     "droppedByBodyContains" : 40,
+    "remainingRecords" : 2850
+  },
+  "step3_removeInjectionTraces" : {
+    "strippedValuesByPhrase" : {
+      " Feature Flag Enabled" : 76
+    },
+    "droppedByTerm" : { },
     "removedAttributeKeys" : { },
     "remainingRecords" : 2850
   },
@@ -30,11 +42,34 @@
     "maxProxyDurationMs" : 331,
     "topGroupsBefore" : [ "1107x frontend-proxy |  | GET | - | 200 | <envoy access log>", "374x product-catalog | 9 |  |  |  | Product Found", "144x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "120x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "94x product-catalog | 9 |  |  |  | Found # products from database", "80x currency | 9 |  |  |  | conversion successful", "74x frontend | 9 | GET | /api/cart | 200 | API request completed", "45x frontend-proxy |  | POST | - | 200 | <envoy access log>" ]
   },
+  "step4_injectPii" : {
+    "candidateValues" : 80,
+    "naturalByKey" : {
+      "demo.order.id" : 6,
+      "demo.shipping.tracking.id" : 6,
+      "session.id" : 16,
+      "transaction_id" : 6,
+      "user.id" : 8
+    },
+    "injectedByKey" : {
+      "demo.order.id" : 4,
+      "demo.payment.card_number" : 5,
+      "demo.shipping.tracking.id" : 4,
+      "session.id" : 5,
+      "user.email" : 5,
+      "user.id" : 5
+    },
+    "noMatchingLogByKey" : {
+      "session.id" : 87,
+      "user.id" : 10
+    },
+    "totalPii" : 70
+  },
   "step5_size" : {
     "outputRecords" : 458,
-    "distinctFields" : 104,
-    "chars" : 748665,
-    "estimatedTokensPassthrough" : 187167,
+    "distinctFields" : 108,
+    "chars" : 748458,
+    "estimatedTokensPassthrough" : 187115,
     "maxInputTokens" : 250000
   }
 }

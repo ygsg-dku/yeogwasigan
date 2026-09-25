@@ -5,11 +5,16 @@
     "sourceDir" : "../../scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
-    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
+    "stripPhrases" : [ " Feature Flag Enabled" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
+    "piiKeys" : [ "demo.payment.card_number", "demo.payment.card_cvv", "lastFourDigits", "user.id", "session.id", "user.email", "demo.order.id", "demo.shipping.tracking.id", "transactionId", "transaction_id", "tracking_id" ],
+    "piiMinLength" : 6,
+    "piiMaxPerKey" : 5,
     "maxInputTokens" : 250000
   },
   "inputRecords" : 2335,
@@ -19,6 +24,11 @@
       "otelcol-contrib" : 483
     },
     "droppedByBodyContains" : 18,
+    "remainingRecords" : 1582
+  },
+  "step3_removeInjectionTraces" : {
+    "strippedValuesByPhrase" : { },
+    "droppedByTerm" : { },
     "removedAttributeKeys" : { },
     "remainingRecords" : 1582
   },
@@ -30,11 +40,29 @@
     "maxProxyDurationMs" : 183,
     "topGroupsBefore" : [ "583x frontend-proxy |  | GET | - | 200 | <envoy access log>", "223x product-catalog | 9 |  |  |  | Product Found", "72x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "72x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "56x currency | 9 |  |  |  | conversion successful", "40x product-catalog | 9 |  |  |  | Found # products from database", "39x frontend | 9 | GET | /api/cart | 200 | API request completed", "36x frontend-proxy |  | - | - | 0 | <envoy access log>" ]
   },
+  "step4_injectPii" : {
+    "candidateValues" : 35,
+    "naturalByKey" : {
+      "session.id" : 5,
+      "user.id" : 8
+    },
+    "injectedByKey" : {
+      "demo.payment.card_number" : 4,
+      "session.id" : 5,
+      "user.email" : 4,
+      "user.id" : 5
+    },
+    "noMatchingLogByKey" : {
+      "session.id" : 50,
+      "user.id" : 6
+    },
+    "totalPii" : 31
+  },
   "step5_size" : {
     "outputRecords" : 313,
-    "distinctFields" : 90,
-    "chars" : 483880,
-    "estimatedTokensPassthrough" : 120970,
+    "distinctFields" : 94,
+    "chars" : 484715,
+    "estimatedTokensPassthrough" : 121179,
     "maxInputTokens" : 250000
   }
 }

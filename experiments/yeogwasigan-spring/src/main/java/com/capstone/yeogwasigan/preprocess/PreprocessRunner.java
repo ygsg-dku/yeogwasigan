@@ -1,9 +1,11 @@
 package com.capstone.yeogwasigan.preprocess;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +15,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
 
 import com.capstone.yeogwasigan.core.config.AppProperties;
 import com.capstone.yeogwasigan.core.log.LogFormat;
+import com.capstone.yeogwasigan.core.scenario.PiiItem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -26,6 +31,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * 입력: {sourceDir}/&lt;시나리오&gt;/raw.jsonl        (OTel Collector 원본. 절대 수정하지 않는다)
  * 출력: {scenariosDir}/&lt;시나리오&gt;/raw.jsonl      (내부 3층 형식, 실험·데모가 읽는 파일)
  *       {scenariosDir}/&lt;시나리오&gt;/preprocess_report.json   (단계별 제거 통계 + 적용 규칙)
+ *       {scenariosDir}/&lt;시나리오&gt;/injected_pii.yaml         (④ 잔존 채점에 쓸 민감값: 자연 발생 + 주입)
  * </pre>
  *
  * '그대로' 기준 추정 토큰이 상한을 넘는 시나리오는 raw.jsonl 을 쓰지 않고 실패로 보고한다. (몰래 자르지 않는다)
@@ -61,7 +67,9 @@ public class PreprocessRunner implements CommandLineRunner {
         for (String id : props.scenarios()) {
             Path in = source.resolve(id).resolve("raw.jsonl");
             log.info("[{}] 읽는 중: {}", id, in);
-            Preprocessor.Result r = pre.apply(LogFormat.parse(Files.readString(in, StandardCharsets.UTF_8)));
+            String text = Files.readString(in, StandardCharsets.UTF_8);
+            Preprocessor.Result r = pre.apply(LogFormat.parse(text),
+                    SpanPiiExtractor.extract(text, new HashSet<>(props.piiKeys())));
 
             Map<String, Object> report = new LinkedHashMap<>();
             report.put("scenario", id);
@@ -84,6 +92,7 @@ public class PreprocessRunner implements CommandLineRunner {
                 continue;
             }
             Files.writeString(outDir.resolve("raw.jsonl"), LogFormat.serialize(r.records()) + "\n", StandardCharsets.UTF_8);
+            writePii(outDir.resolve("injected_pii.yaml"), id, r.pii());
             log.info("[{}] {}건 → {}건, 필드 {}개, '그대로' 추정 {} 토큰", id, r.report().get("inputRecords"),
                     size.get("outputRecords"), size.get("distinctFields"), tokens);
         }
@@ -91,5 +100,25 @@ public class PreprocessRunner implements CommandLineRunner {
             throw new IllegalStateException("토큰 상한을 넘은 시나리오: " + failed);
         }
         log.info("완료: {}", target);
+    }
+
+    private static void writePii(Path path, String scenario, List<PiiItem> pii) throws IOException {
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (PiiItem p : pii) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", p.id());
+            m.put("type", p.type());
+            m.put("value", p.value());
+            m.put("description", p.description());
+            items.add(m);
+        }
+        DumperOptions opt = new DumperOptions();
+        opt.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        opt.setAllowUnicode(true);
+        String header = "# " + scenario + " — 전처리 ④ 가 만든 민감값 목록 (자동 생성, 직접 고치지 말 것)\n"
+                + "# ResidualScorer 가 결과물(AI 로 실제 전송되는 텍스트)에서 value 를 문자열 검색으로 센다.\n"
+                + "# type 은 PROTOCOL v1.1 민감 키 이름. description 이 '자연 발생'이면 원본 로그에 원래 있던 값,\n"
+                + "# '주입'이면 같은 traceId 의 span 에만 있던 값을 로그에 옮겨 넣은 것이다.\n";
+        Files.writeString(path, header + new Yaml(opt).dump(Map.of("items", items)), StandardCharsets.UTF_8);
     }
 }

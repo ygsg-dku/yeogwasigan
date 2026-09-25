@@ -5,11 +5,16 @@
     "sourceDir" : "../../scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
-    "excludeAttributePrefixes" : [ "feature_flag" ],
+    "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
+    "stripPhrases" : [ " Feature Flag Enabled" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
+    "piiKeys" : [ "demo.payment.card_number", "demo.payment.card_cvv", "lastFourDigits", "user.id", "session.id", "user.email", "demo.order.id", "demo.shipping.tracking.id", "transactionId", "transaction_id", "tracking_id" ],
+    "piiMinLength" : 6,
+    "piiMaxPerKey" : 5,
     "maxInputTokens" : 250000
   },
   "inputRecords" : 11720,
@@ -19,26 +24,55 @@
       "otelcol-contrib" : 1591
     },
     "droppedByBodyContains" : 130,
-    "removedAttributeKeys" : {
-      "feature_flag_key" : 3,
-      "feature_flag_provider_name" : 3,
-      "feature_flag_variant" : 3
-    },
     "remainingRecords" : 9049
   },
+  "step3_removeInjectionTraces" : {
+    "strippedValuesByPhrase" : { },
+    "droppedByTerm" : {
+      "feature flag" : 3,
+      "feature_flag" : 3
+    },
+    "removedAttributeKeys" : { },
+    "remainingRecords" : 9043
+  },
   "step2_reduceRepeats" : {
-    "groups" : 74,
+    "groups" : 72,
     "keptImportant(WARN+/5xx)" : 0,
-    "keptTotal" : 424,
+    "keptTotal" : 418,
     "droppedRepeats" : 8625,
     "maxProxyDurationMs" : 10195,
     "topGroupsBefore" : [ "3846x frontend-proxy |  | GET | - | 200 | <envoy access log>", "1253x product-catalog | 9 |  |  |  | Product Found", "450x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "357x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "291x product-catalog | 9 |  |  |  | Found # products from database", "232x frontend | 9 | GET | /api/cart | 200 | API request completed", "225x frontend | 9 | GET | /api/recommendations | 200 | API request completed", "216x currency | 9 |  |  |  | conversion successful" ]
   },
+  "step4_injectPii" : {
+    "candidateValues" : 221,
+    "naturalByKey" : {
+      "demo.order.id" : 6,
+      "demo.shipping.tracking.id" : 6,
+      "session.id" : 3,
+      "transaction_id" : 6,
+      "user.id" : 9
+    },
+    "injectedByKey" : {
+      "demo.order.id" : 5,
+      "demo.payment.card_number" : 5,
+      "demo.shipping.tracking.id" : 5,
+      "session.id" : 5,
+      "user.email" : 5,
+      "user.id" : 5
+    },
+    "noMatchingLogByKey" : {
+      "demo.order.id" : 39,
+      "demo.shipping.tracking.id" : 13,
+      "session.id" : 110,
+      "user.id" : 25
+    },
+    "totalPii" : 60
+  },
   "step5_size" : {
-    "outputRecords" : 424,
-    "distinctFields" : 102,
-    "chars" : 629689,
-    "estimatedTokensPassthrough" : 157423,
+    "outputRecords" : 418,
+    "distinctFields" : 105,
+    "chars" : 624610,
+    "estimatedTokensPassthrough" : 156153,
     "maxInputTokens" : 250000
   }
 }
