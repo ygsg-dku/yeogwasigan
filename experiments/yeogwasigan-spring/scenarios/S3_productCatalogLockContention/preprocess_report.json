@@ -1,14 +1,14 @@
 {
   "scenario" : "S3_productCatalogLockContention",
-  "source" : "/Users/junsu/Desktop/DKU/3학년/2학기/캡스톤/scenarios/S3_productCatalogLockContention/raw.jsonl",
+  "source" : "/Users/kangdaeun/.codex/.chatgpt-projects/g-p-6aa83fc819348191b12bc82380aec498/yeogwasigan/experiments/pilot/scenarios/S3_productCatalogLockContention/raw.jsonl",
   "rules" : {
-    "sourceDir" : "../../scenarios",
+    "sourceDir" : "../pilot/scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
     "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
     "stripPhrases" : [ " Feature Flag Enabled" ],
-    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "scenario active", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "productCatalogLockContention", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
@@ -28,14 +28,16 @@
   },
   "step3_removeInjectionTraces" : {
     "strippedValuesByPhrase" : { },
-    "droppedByTerm" : { },
+    "droppedByTerm" : {
+      "scenario active" : 4
+    },
     "removedAttributeKeys" : { },
-    "remainingRecords" : 1511
+    "remainingRecords" : 1507
   },
   "step2_reduceRepeats" : {
-    "groups" : 72,
+    "groups" : 71,
     "keptImportant(WARN+/5xx)" : 17,
-    "keptTotal" : 315,
+    "keptTotal" : 311,
     "droppedRepeats" : 1196,
     "maxProxyDurationMs" : 15003,
     "topGroupsBefore" : [ "611x frontend-proxy |  | GET | - | 200 | <envoy access log>", "186x product-catalog | 9 |  |  |  | Product Found", "68x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "63x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "47x frontend | 9 | GET | /api/cart | 200 | API request completed", "46x product-catalog | 9 |  |  |  | Found # products from database", "41x currency | 9 |  |  |  | conversion successful", "37x frontend-proxy |  | - | - | 0 | <envoy access log>" ]
@@ -61,10 +63,10 @@
     "totalPii" : 22
   },
   "step5_size" : {
-    "outputRecords" : 315,
+    "outputRecords" : 311,
     "distinctFields" : 104,
-    "chars" : 477194,
-    "estimatedTokensPassthrough" : 119299,
+    "chars" : 473866,
+    "estimatedTokensPassthrough" : 118467,
     "maxInputTokens" : 250000
   }
 }

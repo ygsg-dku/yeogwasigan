@@ -53,7 +53,7 @@ yeogwasigan:
   # 공통 전처리 규칙. 실험(preprocess 프로파일)과 웹 데모의 [공통 전처리] 옵션이 같은 규칙을 쓴다.
   # 세 조건에 똑같이 적용되므로 실험 시작 전에 정하고 끝까지 유지할 것. 대상 시나리오 목록은 application-preprocess.yml.
   preprocess:
-    source-dir: ../../scenarios
+    source-dir: ../pilot/scenarios   # 레포의 pilot 수집 로그 (gunzip -k 로 .jsonl.gz 를 먼저 풀 것)
 
     # ① 실험 장비 로그 제거
     exclude-services: [load-generator, otelcol-contrib, flagd, flagd-ui]   # 가짜 트래픽 발생기, 수집기 자체 로그, 장애 스위치
@@ -68,10 +68,12 @@ yeogwasigan:
       - feature flag            # S5 shipping "…due to intlShippingSlowdown feature flag"
       - FeatureFlag             # S4 fraud-detection "FeatureFlag 'kafkaQueueProblems' is enabled…"
       - feature_flag            # feature_flag_key 등 스위치 속성이 붙은 로그
+      - scenario active         # S3 product-catalog "lock contention scenario active: holding … lock"
       # 파일럿 시나리오의 스위치 이름 (pilot.py 로 켠 flagd 플래그)
       - paymentFailure
       - paymentUnreachable
       - productCatalogFailure
+      - productCatalogLockContention
       - kafkaQueueProblems
       - intlShippingSlowdown
       - emitRawPii

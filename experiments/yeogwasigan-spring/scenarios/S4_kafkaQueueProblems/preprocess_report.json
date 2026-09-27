@@ -1,14 +1,14 @@
 {
   "scenario" : "S4_kafkaQueueProblems",
-  "source" : "/Users/junsu/Desktop/DKU/3학년/2학기/캡스톤/scenarios/S4_kafkaQueueProblems/raw.jsonl",
+  "source" : "/Users/kangdaeun/.codex/.chatgpt-projects/g-p-6aa83fc819348191b12bc82380aec498/yeogwasigan/experiments/pilot/scenarios/S4_kafkaQueueProblems/raw.jsonl",
   "rules" : {
-    "sourceDir" : "../../scenarios",
+    "sourceDir" : "../pilot/scenarios",
     "scenarios" : [ "S0_normal", "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
     "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
     "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
     "excludeBodyContains" : [ "/flagservice/" ],
     "stripPhrases" : [ " Feature Flag Enabled" ],
-    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "scenario active", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "productCatalogLockContention", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii" ],
     "keepFirst" : 5,
     "keepLast" : 1,
     "keepSlowest" : 3,
