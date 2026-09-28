@@ -15,7 +15,7 @@ requiredFields:
   # 원인 분석용 속성 (9/28 추가: 파일럿 로그에서 S1·S2·S6 원인이 이 칸에 있음. S2 badAddress 는 여기에만 있다)
   - logRecord.attributes.exception.message    # 에러 메시지
   - logRecord.attributes.exception.type       # 에러 종류
-  - logRecord.attributes.url.path             # 요청 경로 (상품 ID 등)
+  # url.path(요청 경로)는 뺐다: 세션·사용자 ID가 섞여 파일럿 누출 66 중 38이 이 칸에서 나왔고, 원인 증거는 에러 메시지·본문에 이미 있다
   - logRecord.attributes.http.response.status_code  # 응답 코드 (5xx)
 
 # 담되, 값을 바꿔서 내보내는 필드.
