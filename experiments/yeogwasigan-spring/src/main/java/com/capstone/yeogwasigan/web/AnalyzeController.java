@@ -23,6 +23,7 @@ import com.capstone.yeogwasigan.core.log.LogFormat;
 import com.capstone.yeogwasigan.core.presidio.PresidioClient;
 import com.capstone.yeogwasigan.core.scenario.PiiItem;
 import com.capstone.yeogwasigan.core.scenario.ScenarioRepository;
+import com.capstone.yeogwasigan.core.scoring.KeywordScorer;
 import com.capstone.yeogwasigan.core.scoring.ResidualScorer;
 import com.capstone.yeogwasigan.core.template.TemplateLoader;
 import com.capstone.yeogwasigan.preprocess.PreprocessProperties;
@@ -41,6 +42,7 @@ import com.capstone.yeogwasigan.web.dto.CompareRow;
  * POST /api/compare   (같은 입력) → 세 방식의 필드 수·잔존 수 요약
  * GET  /api/meta      목적·필터 목록, 고정 질문, AI 모드, 샘플 목록, Presidio 상태
  * GET  /api/sample/{scenarioId}   샘플 원본 로그
+ * (실험 러너 결과 보기는 {@link ResultsController})
  * </pre>
  *
  * 요청의 preprocess=true 면 필터 전에 실험과 같은 공통 전처리({@link Preprocessor})를 적용한다.
@@ -60,10 +62,11 @@ public class AnalyzeController {
     private final TemplateLoader templates;
     private final PresidioClient presidio;
     private final PreprocessProperties preprocessProps;
+    private final KeywordScorer keywordScorer;
 
     public AnalyzeController(FilterRegistry filters, ResidualScorer scorer, AiClient aiClient,
                              ScenarioRepository scenarios, TemplateLoader templates, PresidioClient presidio,
-                             PreprocessProperties preprocessProps) {
+                             PreprocessProperties preprocessProps, KeywordScorer keywordScorer) {
         this.filters = filters;
         this.scorer = scorer;
         this.aiClient = aiClient;
@@ -71,6 +74,7 @@ public class AnalyzeController {
         this.templates = templates;
         this.presidio = presidio;
         this.preprocessProps = preprocessProps;
+        this.keywordScorer = keywordScorer;
     }
 
     @PostMapping("/analyze")
@@ -86,7 +90,10 @@ public class AnalyzeController {
         }
         // "실제로 나간 것"(output)만 AI 로 보낸다. 질문은 세 방식 모두 고정 질문.
         AiAnswer answer = aiClient.ask(filtered.output(), ExperimentConstants.FIXED_QUESTION);
-        return filtered.withAi(answer.text(), answer.mode(), answer.model());
+        // 실험 러너와 같은 기준: live 응답만, 채점 시나리오를 고른 경우만 채점한다
+        KeywordScorer.Score score = "live".equals(answer.mode())
+                ? keywordScorer.score(req.scenarioId(), answer.text()).orElse(null) : null;
+        return filtered.withAi(answer.text(), answer.mode(), answer.model(), score);
     }
 
     @PostMapping("/filter")
@@ -121,6 +128,8 @@ public class AnalyzeController {
         m.put("aiModel", aiClient.model());
         m.put("samples", scenarios.ids());
         m.put("presidioUp", presidio.isUp());
+        m.put("scoringRules", keywordScorer.rules().stream()
+                .map(r -> Map.of("id", r.id(), "description", r.description())).toList());
         return m;
     }
 
@@ -164,6 +173,6 @@ public class AnalyzeController {
                 residual.total(),
                 residual.detail(),
                 notes,
-                null, null, null);
+                null, null, null, null);
     }
 }

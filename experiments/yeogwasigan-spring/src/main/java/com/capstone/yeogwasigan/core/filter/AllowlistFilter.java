@@ -33,7 +33,7 @@ import com.capstone.yeogwasigan.core.tokenize.CaseScopedTokenizer;
  *       목록에 없으면 onUnknownField 규칙(DROP)에 따라 무조건 버린다.
  *       → 처음 보는 필드가 새로 생겨도 자동으로 안 나간다. (담기의 핵심)</li>
  *   <li>fieldActions 가 있는 필드는 값을 사건 단위 토큰/가명으로 바꾼다.</li>
- *   <li>innerScanOnKeptFields=true 이면, 원문 그대로 담은 필드(특히 logRecord.body 같은 자유 텍스트)를
+ *   <li>(기본값은 끔) innerScanOnKeptFields=true 이면, 원문 그대로 담은 필드(특히 logRecord.body 같은 자유 텍스트)를
  *       한 번 더 스캔해서 민감값이 있는 "그 부분만" 토큰으로 치환한다.
  *       자유 텍스트는 키 이름으로 분류할 수 없기 때문에 필요한 단계다.</li>
  * </ol>
@@ -42,7 +42,9 @@ import com.capstone.yeogwasigan.core.tokenize.CaseScopedTokenizer;
  * <ul>
  *   <li>목록에 없는 필드에 핵심 단서가 있으면 그 단서도 같이 버려진다.
  *       → 샘플 시나리오의 INFO 로그 함정이 이 경우를 측정한다.</li>
- *   <li>정규식 내부 재검사는 이름처럼 형식이 없는 값을 잡지 못한다.</li>
+ *   <li>내부 재검사가 꺼져 있으면(기본값) 담은 필드 안의 민감값(예: body 속 이메일)은 그대로 나간다.
+ *       PROTOCOL 의 담기 정의("목록에 있는 필드만 남김")를 따른 것이다.</li>
+ *   <li>재검사를 켜더라도 정규식은 이름처럼 형식이 없는 값을 잡지 못한다.</li>
  * </ul>
  */
 @Component

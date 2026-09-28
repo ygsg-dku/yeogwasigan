@@ -9,9 +9,11 @@ import com.capstone.yeogwasigan.core.config.ExperimentConstants;
  * @param purpose 목적 ID (기본 INCIDENT_ANALYSIS)
  * @param filter  PASSTHROUGH | DENYLIST | ALLOWLIST (대소문자 무관, 기본 ALLOWLIST)
  * @param caseId  토큰화 salt(사건 단위). 같은 caseId 면 같은 값 → 같은 토큰. 기본 "demo"
+ * @param scenarioId 자동 채점 기준으로 쓸 시나리오 (S1… 또는 폴더 이름). 비우면 채점하지 않는다
  * @param preprocess true 면 필터 전에 실험과 같은 공통 전처리(①②)를 적용한다. 원본 수집 로그를 그대로 올릴 때용. 기본 false
  */
-public record AnalyzeRequest(String log, String purpose, String filter, String caseId, boolean preprocess) {
+public record AnalyzeRequest(String log, String purpose, String filter, String caseId, boolean preprocess,
+                             String scenarioId) {
 
     public AnalyzeRequest {
         purpose = purpose == null || purpose.isBlank() ? ExperimentConstants.PURPOSE_ID : purpose.trim();
@@ -20,6 +22,6 @@ public record AnalyzeRequest(String log, String purpose, String filter, String c
     }
 
     public AnalyzeRequest withFilter(String newFilter) {
-        return new AnalyzeRequest(log, purpose, newFilter, caseId, preprocess);
+        return new AnalyzeRequest(log, purpose, newFilter, caseId, preprocess, scenarioId);
     }
 }

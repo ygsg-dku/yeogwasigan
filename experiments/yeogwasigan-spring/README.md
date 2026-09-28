@@ -7,7 +7,7 @@ Spring Boot 3.5 / Java 17 / Gradle 기반입니다.
 |---|---|---|
 | **A** | 그대로 (`PASSTHROUGH`) | 아무 처리 없이 전송 — 기준선 |
 | **B** | 빼기 (`DENYLIST`) | Microsoft Presidio(공식 Docker 이미지, 기본 설정)로 민감정보를 탐지·마스킹한 뒤 전송 |
-| **C** | 담기 (`ALLOWLIST`) | Purpose Template에 적힌 필드만 골라서 전송 (+ 담은 필드 내부 재검사) |
+| **C** | 담기 (`ALLOWLIST`) | Purpose Template에 적힌 필드만 골라서 전송 (담은 필드 내부 재검사는 기본값 끔) |
 
 **검증할 가설**
 
@@ -267,7 +267,8 @@ public record FilterResult(
 
 - 담는 필드는 `requiredFields` 와 `fieldActions` 에 적힌 필드뿐입니다. 목록에 없는 필드는 처음 보는 필드여도 버립니다(`onUnknownField: DROP`).
 - `traceId`, `spanId`, `parentSpanId` 는 사건 단위 토큰(`TX_`)으로, `host.name` 과 `container.id` 는 가명(`PS_`)으로 바꿉니다.
-- 원문 그대로 담은 필드(특히 `body`)는 정규식으로 한 번 더 스캔해서 민감값이 있는 부분만 토큰으로 바꿉니다(`innerScanOnKeptFields`). 대상은 이메일, 주민번호, 카드번호, 휴대폰번호, 계좌번호, IPv4 입니다.
+- 원문 그대로 담은 필드(특히 `body`)는 **고치지 않고 그대로** 보냅니다. 팀 PROTOCOL(`experiments/pilot/PROTOCOL.md`)의 담기 정의가 "원문에서 목록에 있는 필드만 남김"이기 때문입니다. 재검사를 켜면 목록의 효과와 탐지기의 효과가 섞입니다.
+- 비교용으로 내부 재검사를 켤 수 있습니다(`innerScanOnKeptFields: true`). 켜면 담은 필드를 정규식(또는 `innerScanEngine: presidio`)으로 한 번 더 스캔해서 민감값 부분만 토큰으로 바꿉니다. 정규식 대상은 이메일, 주민번호, 카드번호, 휴대폰번호, 계좌번호, IPv4 입니다.
 - 템플릿 YAML 에 모르는 키가 있거나 fieldAction 이름이 틀리면 서버 시작 시점에 바로 실패합니다.
 
 ### 토큰화 (`CaseScopedTokenizer`)
@@ -299,16 +300,25 @@ OpenTelemetry Demo 의 `paymentFailure` 기능 플래그 장애를 본떠 만든
 |---|---|---|---|---|
 | 그대로 | 49 → 49 | 22 | 전부 | |
 | 빼기 | 49 → 49 | 3 | 박민지 ×3 | 이메일·IP 는 잡힘. 한글 이름은 못 잡음. 계좌는 `110-<US_SSN>` 으로 일부만 가려짐 |
-| 담기 | 49 → 9 | 1 | 박민지 ×1 (body 안) | 정규식 innerScan 도 한글 이름은 못 잡음 |
-| 담기 (innerScan=presidio) | 49 → 9 | 1 | 박민지 ×1 | 내부 재검사를 Presidio 로 바꿔도 같은 결과 |
+| 담기 (기본: 재검사 끔) | 49 → 9 | 5 | 계좌·이메일 ×2·박민지·IP (모두 body 안) | 목록에 없는 필드의 값은 안 나가고, 담은 body 안의 값은 그대로 나감 |
+| 담기 (재검사 켬, regex) | 49 → 9 | 1 | 박민지 ×1 (body 안) | 정규식도 한글 이름은 못 잡음 |
+| 담기 (재검사 켬, presidio) | 49 → 9 | 1 | 박민지 ×1 | 재검사를 Presidio 로 바꿔도 같은 결과 |
 
 ---
+
+## 키워드 자동 채점과 결과 화면
+
+- 판정 키워드는 `scoring/scenarios.json`(PROTOCOL v1.2 에 따라 D 가 로그를 보기 전에 작성)을 그대로 읽습니다. 파일이 없으면 채점하지 않습니다.
+- 서비스 적중·원인 적중: 답에 해당 키워드가 하나라도 있으면 적중(대소문자 무시). 시나리오 이름은 첫 `_` 앞 접두어(`S1`…)로 연결합니다.
+- 실험 러너는 `results.csv` 에 `ai_mode`, `auto_service_hit`, `auto_cause_hit`, `auto_keywords` 칸을 씁니다. 블라인드 채점 파일에는 들어가지 않습니다.
+- 결과 화면: 앱을 띄운 뒤 `http://localhost:8080/results.html` (데모 화면 오른쪽 위 "실험 결과 보기"). `results/` 아래 실행 기록을 골라 시나리오 × 방식 표와 답·보낸 로그를 봅니다.
+- **단순 문자열 검색이라 참고용입니다.** 부정문("payment 문제는 아닙니다")도 적중으로 세고, 틀린 답도 일반적인 단어로 적중할 수 있습니다. 최종 판정은 블라인드 사람 채점으로 합니다.
 
 ## 실험 타당성 메모 (발표·보고서에서 방어해야 할 지점)
 
 1. **Presidio 과잉 마스킹.** 기본 설정은 일부 `timeUnixNano`(4건)·`observedTimeUnixNano`(2건)와 버전 문자열 `2.0.2` 를 `<DATE_TIME>` 으로, `v0.11.1` 을 `<US_DRIVER_LICENSE>.11.1` 로, 호스트명 `otel-demo-node-02` 를 `otel-demo-<DATE_TIME>` 으로, spanId 하나를 `<NRP>` 로 바꿉니다. 시간 순서나 trace 관계가 깨질 수 있으므로 빼기의 RCA 점수에 영향을 줍니다. 이것도 빼기 방식의 실제 특성이라 기본값으로 둡니다. 구조 필드를 검사에서 빼기로 정한다면 `application.yml` 의 `yeogwasigan.presidio.skip-fields` 에 **실험 시작 전에** 적고 끝까지 유지하세요. (`run_meta.json` 에 기록됩니다)
 2. **잔존은 "완전한 원문 문자열"만 셉니다.** 계좌번호가 `110-<US_SSN>` 처럼 일부만 남으면 0건으로 셉니다. 부분 노출까지 보려면 채점 규칙을 따로 정해야 합니다.
-3. **innerScan 의 비대칭.** 담기의 정규식은 국내 계좌 형식을 알고 있고, Presidio 기본 설정은 모릅니다. "담기의 이득이 필드 선택 덕분인가, 정규식 덕분인가"라는 반박에 대비해 템플릿의 `innerScanEngine: presidio` 로도 돌려 두었습니다(위 표 마지막 줄 — 결과 같음). 보고서에 두 결과를 함께 싣는 것을 권합니다.
+3. **담기는 기본적으로 재검사를 하지 않습니다.** "담기의 이득이 필드 선택 덕분인가, 탐지기 덕분인가"라는 반박을 없애기 위해, PROTOCOL 정의대로 목록만 적용합니다. 재검사를 켠 결과(위 표 아래 두 줄)는 비교 참고용이며, 켤 때는 정규식이 국내 계좌 형식을 알고 Presidio 기본 설정은 모른다는 비대칭이 생깁니다.
 4. **`parentSpanId` 토큰화를 추가했습니다.** 원안의 `fieldActions` 에는 spanId 만 토큰화되어 있었습니다. 그러면 parentSpanId 는 원문으로 나가서 부모-자식 연결이 끊깁니다.
 5. **`fieldActions` 에 적힌 필드는 담깁니다.** `container.id` 와 `host.name` 은 `requiredFields` 에는 없지만 가명화해서 내보냅니다(그래서 7개가 아니라 9개 필드). 빼고 싶으면 템플릿에서 해당 줄을 지우면 됩니다.
 6. **실제 OTLP 로그에는 `parentSpanId` 가 없습니다.** span 데이터에만 있습니다. 실제 로그로 바꾸면 이 필드는 비어 있게 되니, 필요하면 trace 데이터와 조인하는 단계를 따로 두세요.

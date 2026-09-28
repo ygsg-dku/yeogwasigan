@@ -124,6 +124,14 @@
   #ai .answer { border: 1px solid var(--ink); padding: 16px 18px; white-space: pre-wrap; font-size: 15px; line-height: 1.7; min-height: 72px; }
   #ai .answer.stale { color: var(--g3); border-style: dashed; }
   #ai .meta { font-family: var(--mono); font-size: 12px; color: var(--g3); margin-top: 6px; }
+  /* 키워드 자동 채점 */
+  .score { margin-top: 10px; border: 1px solid var(--ink); padding: 10px 14px; font-size: 13.5px; display: grid; gap: 4px; }
+  .score .hit { display: inline-block; font-weight: 800; border: 1px solid var(--ink); padding: 0 6px; margin-right: 6px; }
+  .score .hit.on { background: var(--ink); color: var(--paper); }
+  .score .kw { font-family: var(--mono); font-size: 12px; color: var(--g4); }
+  .score .note { font-size: 12px; color: var(--g3); }
+  header .nav { font-size: 13px; font-weight: 800; color: var(--ink); text-decoration: none; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+  header .nav:hover { background: var(--g1); }
   .loading::after { content: " …"; animation: blink 1s steps(2) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
 
@@ -149,6 +157,7 @@
       <div class="sub">내부 장애 로그를 외부 AI로 보내기 전, 무엇이 나가는지 확인합니다</div>
     </div>
     <div class="status">
+      <a class="nav" href="results.html">실험 결과 보기 →</a>
       <div id="presidioStatus" class="badge off">Presidio: 확인 중</div>
       <div id="aiStatus" class="badge off">AI: 확인 중</div>
     </div>
@@ -180,6 +189,9 @@
         </div>
         <label class="chk" title="실험과 같은 규칙: 실험 장비 로그 제거 + 반복 로그 줄이기. 원본 수집 로그를 올릴 때 켜세요.">
           <input type="checkbox" id="preprocess"> 공통 전처리 (실험과 동일)
+        </label>
+        <label class="chk" for="scoreScenario" title="AI 답을 이 시나리오의 판정 키워드(scenarios.json)로 자동 채점합니다">채점 기준
+          <select id="scoreScenario" aria-label="자동 채점 기준 시나리오"><option value="">채점 안 함</option></select>
         </label>
         <span class="spacer"></span>
         <button id="analyzeBtn" class="primary" type="button">분석 요청</button>
@@ -230,6 +242,7 @@
     <h2>AI 응답</h2>
     <div class="answer" id="answer"><span class="none">[분석 요청]을 누르면 위의 "실제로 나간 것"만 외부 AI로 전송됩니다.</span></div>
     <div class="meta" id="answerMeta"></div>
+    <div class="score" id="autoScore" hidden></div>
   </section>
 </div>
 
@@ -246,6 +259,7 @@ const currentFilter = () => document.querySelector('input[name=filter]:checked')
 const requestBody = (filter) => ({
   log: currentLog(),
   preprocess: $("preprocess").checked,
+  scenarioId: $("scoreScenario").value || null,
   purpose: $("purpose").value || state.purpose,
   filter: filter || currentFilter(),
   caseId: $("sampleSelect").value || "demo",
@@ -370,6 +384,7 @@ function markAnswerStale() {
   if (state.lastAnswerKey && state.lastAnswerKey !== keyOf()) {
     $("answer").classList.add("stale");
     $("answerMeta").textContent = "※ 이전 요청의 응답입니다. 입력이나 방식이 바뀌었으니 다시 [분석 요청]을 누르세요.";
+    $("autoScore").hidden = true;
   }
 }
 
@@ -411,11 +426,28 @@ async function analyze() {
     $("answer").textContent = r.aiAnswer;
     state.lastAnswerKey = key;
     $("answerMeta").textContent = `방식: ${r.filterLabel} · 모델: ${r.aiModel} · 모드: ${r.aiMode} · temperature 0`;
+    renderScore(r.autoScore);
   } catch (e) {
     $("answer").textContent = `오류: ${e.message}`;
   } finally {
     btn.disabled = false;
   }
+}
+
+// 키워드 자동 채점 결과 (참고용 1차 판정)
+function renderScore(sc) {
+  const box = $("autoScore");
+  if (!sc) {
+    box.hidden = !$("scoreScenario").value;
+    box.innerHTML = `<span class="note">채점하지 않았습니다 (AI 응답이 오류이거나 mock 입니다).</span>`;
+    return;
+  }
+  const hit = (on, label) => `<span class="hit${on ? " on" : ""}">${on ? "■" : "□"} ${label}</span>`;
+  const kws = [...sc.serviceMatched, ...sc.causeMatched];
+  box.innerHTML = `<div>${hit(sc.serviceHit, "서비스 적중")}${hit(sc.causeHit, "원인 적중")}</div>`
+    + `<div class="kw">걸린 키워드: ${kws.length ? kws.map(esc).join(", ") : "없음"}</div>`
+    + `<div class="note">${esc(sc.ruleId)} 판정 키워드(scenarios.json) 자동 채점 · 단순 문자열 검색이라 참고용이며 최종 판정은 사람 채점</div>`;
+  box.hidden = false;
 }
 
 async function loadSample() {
@@ -425,7 +457,15 @@ async function loadSample() {
   clearBigLog();
   $("log").value = r.log.trim();
   $("preprocess").checked = false;   // 샘플은 이미 전처리된 파일이다
+  setScoreScenarioFor(id);
   refresh({ compare: true });
+}
+
+// 샘플 이름의 접두어(S1_… → S1)로 채점 기준을 맞춘다. 규칙이 없으면(S0 등) 채점 안 함
+function setScoreScenarioFor(name) {
+  const prefix = String(name || "").split("_")[0];
+  const opt = [...$("scoreScenario").options].find((o) => o.value && o.value === prefix);
+  $("scoreScenario").value = opt ? opt.value : "";
 }
 
 function clearBigLog() {
@@ -446,6 +486,7 @@ let timer;
 $("log").addEventListener("input", () => { clearBigLog(); clearTimeout(timer); timer = setTimeout(() => refresh({ compare: true }), 500); });
 $("purpose").addEventListener("change", () => refresh({ compare: true }));
 $("preprocess").addEventListener("change", () => refresh({ compare: true }));
+$("scoreScenario").addEventListener("change", markAnswerStale);
 $("sampleBtn").addEventListener("click", loadSample);
 $("analyzeBtn").addEventListener("click", analyze);
 $("fileInput").addEventListener("change", (e) => {
@@ -460,6 +501,7 @@ $("fileInput").addEventListener("change", (e) => {
       $("log").placeholder = `업로드한 파일: ${file.name} (${(file.size / 1048576).toFixed(1)}MB) — 너무 커서 편집창에는 표시하지 않습니다. `
         + `여기에 직접 입력하면 업로드한 파일 대신 입력한 내용이 쓰입니다.`;
       $("preprocess").checked = true;   // 원본 수집 로그는 전처리 없이는 AI 입력 한도를 넘는다
+      setScoreScenarioFor(file.name);   // 파일 이름이 S1_… 이면 자동으로, 아니면 직접 고른다
     } else {
       clearBigLog();
       $("log").value = text;
@@ -476,6 +518,8 @@ $("fileInput").addEventListener("change", (e) => {
     const m = await api("/api/meta");
     $("purpose").innerHTML = m.purposes.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
     $("sampleSelect").innerHTML = m.samples.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    $("scoreScenario").innerHTML = `<option value="">채점 안 함</option>`
+      + (m.scoringRules || []).map((r) => `<option value="${esc(r.id)}">${esc(r.id)} ${esc(r.description)}</option>`).join("");
     $("sampleSelect").style.display = m.samples.length > 1 ? "" : "none";
     $("question").textContent = m.question;
     $("aiStatus").textContent = `AI: ${m.aiMode === "live" ? m.aiModel : "mock 모드 (API 키 없음)"}`;

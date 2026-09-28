@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>여과시간 실험 결과</title>
+<style>
+  /* index.html 과 같은 흑백 체계. 적중은 채운 네모(■), 불발은 빈 네모(□)로 구분한다. */
+  :root {
+    --ink: #000;
+    --paper: #fff;
+    --g1: #f4f4f4;
+    --g2: #d9d9d9;
+    --g3: #8a8a8a;
+    --g4: #555;
+    --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, "D2Coding", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
+  body { font-family: var(--sans); font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+           border-bottom: 3px solid var(--ink); padding-bottom: 14px; }
+  header h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -0.02em; }
+  header .sub { color: var(--g4); font-size: 14px; margin-top: 2px; }
+  header .nav { font-size: 13px; font-weight: 800; color: var(--ink); text-decoration: none; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+  header .nav:hover { background: var(--g1); }
+
+  section { padding: 26px 0; border-bottom: 1px solid var(--g2); }
+  section:last-of-type { border-bottom: 0; }
+  h2 { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; margin: 0 0 12px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  select { font: inherit; font-size: 14px; border: 1px solid var(--ink); padding: 7px 10px; background: var(--paper); color: var(--ink); border-radius: 0; }
+  select:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  button { font: inherit; font-size: 13px; cursor: pointer; background: var(--paper); color: var(--ink); border: 1px solid var(--ink); padding: 5px 10px; border-radius: 0; }
+  button:hover { background: var(--g1); }
+  .badge { font-family: var(--mono); font-size: 12px; border: 1px solid var(--ink); padding: 3px 8px; white-space: nowrap; }
+  .badge.warn { background: var(--ink); color: var(--paper); font-weight: 700; }
+  .note { font-size: 12.5px; color: var(--g4); margin-top: 10px; max-width: 80ch; }
+  .note b { color: var(--ink); }
+  .empty { padding: 28px; text-align: center; color: var(--g3); border: 1px dashed var(--g2); }
+  .err { color: var(--ink); font-weight: 800; border-left: 6px solid var(--ink); padding: 10px 14px; }
+
+  /* 요약 표: 시나리오 × 방식 */
+  .table-wrap { overflow-x: auto; border: 3px solid var(--ink); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-variant-numeric: tabular-nums; }
+  th, td { border-bottom: 1px solid var(--g2); border-right: 1px solid var(--g2); padding: 0; text-align: left; vertical-align: top; }
+  th:last-child, td:last-child { border-right: 0; }
+  thead th { background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 800; padding: 9px 12px; }
+  thead th small { font-family: var(--mono); font-weight: 400; color: #bbb; margin-left: 4px; }
+  tbody th { padding: 10px 12px; font-size: 13px; font-weight: 800; white-space: nowrap; }
+  tbody th .desc { display: block; font-weight: 400; color: var(--g4); font-size: 12px; margin-top: 2px; white-space: normal; }
+  tfoot td, tfoot th { border-top: 2px solid var(--ink); border-bottom: 0; padding: 10px 12px; font-size: 13px; background: var(--g1); }
+  .cell { display: block; width: 100%; height: 100%; border: 0; text-align: left; padding: 10px 12px; font-size: 13px; }
+  .cell.on { outline: 3px solid var(--ink); outline-offset: -3px; background: var(--g1); }
+  .cell .line { display: flex; justify-content: space-between; gap: 8px; }
+  .cell .k { color: var(--g4); }
+  .marks { font-family: var(--mono); letter-spacing: 1px; font-weight: 700; }
+  .cell .res { margin-top: 4px; font-family: var(--mono); font-size: 12px; color: var(--g4); }
+  .cell .res b { color: var(--ink); font-size: 14px; }
+  .cell .errs { font-family: var(--mono); font-size: 11.5px; margin-top: 2px; }
+
+  /* 상세: 선택한 시나리오의 세 방식 답 */
+  .detail-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .detail-head h3 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.01em; }
+  .detail-head .desc { color: var(--g4); font-size: 14px; }
+  .kwlist { font-size: 12.5px; color: var(--g4); margin-bottom: 14px; display: grid; gap: 2px; }
+  .kwlist code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; align-items: start; }
+  .col { border: 1px solid var(--ink); min-width: 0; }
+  .col > h4 { margin: 0; padding: 8px 12px; background: var(--ink); color: var(--paper); font-size: 14px; font-weight: 800; }
+  /* 그리드 칸이 긴 로그(pre) 폭만큼 늘어나지 않도록 0 까지 줄어들게 한다 */
+  .run { border-top: 1px solid var(--g2); padding: 10px 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .run > * { min-width: 0; }
+  .run:first-of-type { border-top: 0; }
+  .run .top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
+  .run .top .n { font-family: var(--mono); font-weight: 700; }
+  .hit { display: inline-block; font-weight: 800; border: 1px solid var(--ink); padding: 0 6px; font-size: 12px; }
+  .hit.on { background: var(--ink); color: var(--paper); }
+  .stat { font-family: var(--mono); font-size: 12px; color: var(--g4); }
+  .answer { white-space: pre-wrap; font-size: 13.5px; line-height: 1.65; max-height: 340px; overflow: auto; border: 1px solid var(--g2); padding: 10px 12px; overflow-wrap: anywhere; }
+  .answer.bad { border-style: dashed; color: var(--g4); }
+  mark { background: var(--ink); color: var(--paper); padding: 0 2px; font-weight: 700; }
+  pre.payload { margin: 0; max-height: 320px; overflow: auto; font-family: var(--mono); font-size: 11.5px; line-height: 1.5; background: var(--g1); padding: 10px 12px; white-space: pre; }
+  .payload-cap { font-size: 12px; color: var(--g4); }
+
+  @media (max-width: 720px) {
+    .wrap { padding: 20px 16px 60px; }
+    header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>여과시간</h1>
+      <div class="sub">실험 러너 결과 — 시나리오마다 세 방식으로 보낸 로그와 AI 답을 비교합니다</div>
+    </div>
+    <a class="nav" href="index.html">← 시연 화면</a>
+  </header>
+
+  <section>
+    <h2>실행 기록</h2>
+    <div class="row">
+      <select id="run" aria-label="실행 기록 선택"></select>
+      <span id="runMeta" class="row"></span>
+    </div>
+    <div id="runNote" class="note"></div>
+  </section>
+
+  <section>
+    <h2>시나리오 × 방식</h2>
+    <div id="summary"><div class="empty">실행 기록을 불러오는 중입니다.</div></div>
+    <div class="note">
+      <b>■ 적중 □ 불발</b> — 네모 하나가 반복 1회입니다. 서비스 적중은 어느 부품이 문제인지, 원인 적중은 무엇 때문인지 맞혔는지를
+      판정 키워드(<code>scenarios.json</code>, D 작성)로 자동 판정한 것입니다. 단순 문자열 검색이라 부정문도 적중으로 세는 등 한계가 있어
+      <b>참고용</b>이며, 최종 판정은 블라인드 사람 채점으로 합니다. 잔존은 AI 에 보낸 로그에 민감값이 그대로 남은 횟수의 평균입니다.
+      칸을 누르면 아래에 그 시나리오의 답이 나옵니다.
+    </div>
+  </section>
+
+  <section id="detail" hidden>
+    <div class="detail-head">
+      <h3 id="dTitle"></h3>
+      <span class="desc" id="dDesc"></span>
+    </div>
+    <div class="kwlist" id="dKeywords"></div>
+    <div class="cols" id="dCols"></div>
+  </section>
+</div>
+
+<script>
+// 결과 화면 — API: /api/runs, /api/runs/{id}, /api/runs/{id}/payload
+const $ = (id) => document.getElementById(id);
+const LABEL = { PASSTHROUGH: "그대로", DENYLIST: "빼기", ALLOWLIST: "담기" };
+const CODE = { PASSTHROUGH: "A", DENYLIST: "B", ALLOWLIST: "C" };
+const state = { data: null, scenario: null };
+
+const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+async function api(path) {
+  const res = await fetch(path);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `요청 실패 (${res.status})`);
+  return data;
+}
+
+// 답 안의 걸린 키워드를 반전 표시 (대소문자 무시)
+function highlight(text, keywords) {
+  let html = esc(text);
+  const kws = [...new Set(keywords)].filter(Boolean).sort((a, b) => b.length - a.length);
+  if (!kws.length) return html;
+  const re = new RegExp(kws.map((k) => esc(k).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "gi");
+  return html.replace(re, (m) => `<mark>${m}</mark>`);
+}
+
+function marks(rows, key) {
+  return rows.map((r) => (r.auto ? (r.auto[key] ? "■" : "□") : "–")).join("");
+}
+
+function ruleFor(scenario) {
+  const prefix = String(scenario).split("_")[0];
+  return (state.data.scoring.rules || []).find((r) => r.id === prefix);
+}
+
+function renderMeta(d) {
+  const m = d.meta || {};
+  const bits = [];
+  if (m.aiModel) bits.push(`<span class="badge">${esc(m.aiModel)}</span>`);
+  if (m.aiMode) bits.push(`<span class="badge${m.aiMode !== "live" ? " warn" : ""}">${esc(m.aiMode)}</span>`);
+  if (m.runs) bits.push(`<span class="badge">반복 ${esc(m.runs)}회</span>`);
+  bits.push(`<span class="badge">호출 ${d.rows.length}건</span>`);
+  if (m.startedAt) bits.push(`<span class="badge">${esc(String(m.startedAt).replace("T", " "))}</span>`);
+  $("runMeta").innerHTML = bits.join("");
+
+  const notes = [];
+  if (!d.scoring.available) notes.push("<b>채점 기준 파일(scoring/scenarios.json)이 없어 자동 채점을 하지 않았습니다.</b>");
+  if (m.aiMode && m.aiMode !== "live") notes.push("<b>mock 모드 실행입니다. 실험 결과로 쓰면 안 됩니다.</b>");
+  const errors = d.rows.filter((r) => r.aiMode !== "live").length;
+  if (errors && m.aiMode === "live") notes.push(`AI 호출 오류 ${errors}건은 채점에서 뺐습니다.`);
+  if (m.temperature !== undefined) notes.push(`temperature ${esc(m.temperature)}${m.reasoningEffort ? ` · reasoning_effort ${esc(m.reasoningEffort)}` : ""}`);
+  $("runNote").innerHTML = notes.join(" · ");
+}
+
+function renderSummary(d) {
+  const scenarios = [...new Set(d.rows.map((r) => r.scenario))];
+  const filters = ["PASSTHROUGH", "DENYLIST", "ALLOWLIST"].filter((f) => d.rows.some((r) => r.filter === f));
+  if (!scenarios.length) { $("summary").innerHTML = `<div class="empty">결과 행이 없습니다.</div>`; return; }
+  const cell = (s, f) => d.summary.find((c) => c.scenario === s && c.filter === f);
+  const rowsOf = (s, f) => d.rows.filter((r) => r.scenario === s && r.filter === f).sort((a, b) => a.run - b.run);
+
+  const head = `<tr><th>시나리오</th>${filters.map((f) => `<th>${LABEL[f]}<small>${CODE[f]}</small></th>`).join("")}</tr>`;
+  const body = scenarios.map((s) => {
+    const rule = ruleFor(s);
+    const tds = filters.map((f) => {
+      const c = cell(s, f);
+      if (!c) return `<td></td>`;
+      const rs = rowsOf(s, f);
+      return `<td><button type="button" class="cell${state.scenario === s ? " on" : ""}" data-s="${esc(s)}">
+        <span class="line"><span class="k">서비스</span><span class="marks">${marks(rs, "serviceHit")}</span></span>
+        <span class="line"><span class="k">원인</span><span class="marks">${marks(rs, "causeHit")}</span></span>
+        <span class="res">잔존 <b>${c.residualAvg}</b>회 · 필드 ${c.fieldsAfter}개</span>
+        ${c.errors ? `<span class="errs">■ 오류 ${c.errors}건</span>` : ""}
+      </button></td>`;
+    }).join("");
+    return `<tr><th scope="row">${esc(s)}${rule ? `<span class="desc">${esc(rule.description)}</span>` : `<span class="desc">채점 기준 없음</span>`}</th>${tds}</tr>`;
+  }).join("");
+
+  // 방식별 합계: 채점된 답 중 적중 비율, 평균 잔존
+  const foot = `<tr><th>합계</th>${filters.map((f) => {
+    const cs = d.summary.filter((c) => c.filter === f);
+    const scored = cs.reduce((a, c) => a + c.scored, 0);
+    const sh = cs.reduce((a, c) => a + c.serviceHits, 0);
+    const ch = cs.reduce((a, c) => a + c.causeHits, 0);
+    const n = cs.reduce((a, c) => a + c.n, 0);
+    const res = n ? (cs.reduce((a, c) => a + c.residualAvg * c.n, 0) / n).toFixed(1) : "–";
+    return `<td>서비스 ${sh}/${scored} · 원인 ${ch}/${scored}<br><span class="stat">평균 잔존 ${res}회</span></td>`;
+  }).join("")}</tr>`;
+
+  $("summary").innerHTML = `<div class="table-wrap"><table><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
+}
+
+function renderDetail() {
+  const d = state.data, s = state.scenario;
+  if (!s) { $("detail").hidden = true; return; }
+  const rule = ruleFor(s);
+  $("dTitle").textContent = s;
+  $("dDesc").textContent = rule ? rule.description : "채점 기준 없음";
+  $("dKeywords").innerHTML = rule
+    ? `<div>서비스 키워드: <code>${rule.serviceKeywords.map(esc).join(", ")}</code></div><div>원인 키워드: <code>${rule.causeKeywords.map(esc).join(", ")}</code></div>`
+    : "";
+  const filters = ["PASSTHROUGH", "DENYLIST", "ALLOWLIST"].filter((f) => d.rows.some((r) => r.scenario === s && r.filter === f));
+  $("dCols").innerHTML = filters.map((f) => {
+    const rs = d.rows.filter((r) => r.scenario === s && r.filter === f).sort((a, b) => a.run - b.run);
+    return `<div class="col"><h4>${LABEL[f]} <small>${CODE[f]}</small></h4>${rs.map((r) => {
+      const a = r.auto;
+      const hits = a
+        ? `<span class="hit${a.serviceHit ? " on" : ""}">${a.serviceHit ? "■" : "□"} 서비스</span><span class="hit${a.causeHit ? " on" : ""}">${a.causeHit ? "■" : "□"} 원인</span>`
+        : `<span class="hit">${r.aiMode === "live" ? "채점 기준 없음" : "채점 안 함 · " + esc(r.aiMode)}</span>`;
+      const kws = a ? [...a.serviceMatched, ...a.causeMatched] : [];
+      const id = `p-${f}-${r.run}`;
+      return `<div class="run">
+        <div class="top"><span class="n">run ${r.run}</span>${hits}</div>
+        <div class="stat">필드 ${r.fieldsBefore}→${r.fieldsAfter} · 잔존 ${r.residual}회${kws.length ? ` · 키워드 ${kws.map(esc).join(", ")}` : ""}</div>
+        <div class="answer${r.aiMode !== "live" ? " bad" : ""}">${highlight(r.answer, kws)}</div>
+        ${r.hasPayload ? `<div><button type="button" data-payload="${esc(f)}|${r.run}" aria-controls="${id}">AI 에 보낸 로그 보기</button></div><div id="${id}" hidden></div>` : ""}
+      </div>`;
+    }).join("")}</div>`;
+  }).join("");
+  $("detail").hidden = false;
+}
+
+async function togglePayload(btn) {
+  const [filter, run] = btn.dataset.payload.split("|");
+  const box = document.getElementById(btn.getAttribute("aria-controls"));
+  if (!box.hidden) { box.hidden = true; btn.textContent = "AI 에 보낸 로그 보기"; return; }
+  if (!box.dataset.loaded) {
+    box.innerHTML = `<div class="payload-cap">불러오는 중…</div>`;
+    box.hidden = false;
+    try {
+      const p = await api(`/api/runs/${encodeURIComponent(state.data.id)}/payload?scenario=${encodeURIComponent(state.scenario)}&filter=${encodeURIComponent(filter)}&run=${run}`);
+      box.innerHTML = `<div class="payload-cap">레코드 ${p.records.toLocaleString()}건 · ${p.chars.toLocaleString()}자${p.truncated ? " · 앞 300건만 표시" : ""}</div><pre class="payload">${esc(p.text)}</pre>`;
+      box.dataset.loaded = "1";
+    } catch (e) {
+      box.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    }
+  }
+  box.hidden = false;
+  btn.textContent = "보낸 로그 닫기";
+}
+
+async function loadRun(id) {
+  $("summary").innerHTML = `<div class="empty">불러오는 중입니다.</div>`;
+  $("detail").hidden = true;
+  try {
+    state.data = await api(`/api/runs/${encodeURIComponent(id)}`);
+    const scenarios = [...new Set(state.data.rows.map((r) => r.scenario))];
+    if (!scenarios.includes(state.scenario)) state.scenario = scenarios[0] || null;
+    renderMeta(state.data);
+    renderSummary(state.data);
+    renderDetail();
+    try { history.replaceState(null, "", `#${id}`); } catch (e) { /* 무시 */ }
+  } catch (e) {
+    $("summary").innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  }
+}
+
+$("run").addEventListener("change", (e) => loadRun(e.target.value));
+$("summary").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-s]");
+  if (!b) return;
+  state.scenario = b.dataset.s;
+  renderSummary(state.data);
+  renderDetail();
+  $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+$("dCols").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-payload]");
+  if (b) togglePayload(b);
+});
+
+(async () => {
+  try {
+    const runs = await api("/api/runs");
+    if (!runs.length) {
+      $("run").innerHTML = `<option>실행 기록 없음</option>`;
+      $("summary").innerHTML = `<div class="empty">results/ 아래에 실행 기록이 없습니다. 실험 러너를 먼저 돌리세요:<br><code>./gradlew bootRun --args='--spring.profiles.active=experiment'</code></div>`;
+      return;
+    }
+    $("run").innerHTML = runs.map((r) => `<option value="${esc(r.id)}">${esc(r.id)} · ${esc(r.aiModel || "?")} · ${r.rows}건 · ${esc((r.filters || []).map((f) => LABEL[f] || f).join("/"))}</option>`).join("");
+    const wanted = location.hash.slice(1);
+    const first = runs.some((r) => r.id === wanted) ? wanted : runs[0].id;
+    $("run").value = first;
+    loadRun(first);
+  } catch (e) {
+    $("summary").innerHTML = `<div class="err">서버에 연결할 수 없습니다: ${esc(e.message)}</div>`;
+  }
+})();
+</script>
+</body>
+</html>

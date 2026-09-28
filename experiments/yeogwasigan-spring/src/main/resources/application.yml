@@ -104,6 +104,10 @@ yeogwasigan:
     # ⑤ '그대로' 기준 추정 토큰 상한 (gpt-5.1 입력 한도 약 27만 토큰보다 여유 있게)
     max-input-tokens: 250000
 
+  # 키워드 자동 채점 기준 (PROTOCOL v1.2: 판정 키워드는 D 가 로그를 보기 전에 작성). 파일이 없으면 채점하지 않는다
+  scoring:
+    keywords-file: scoring/scenarios.json
+
   blind:
     action: prepare                             # prepare | merge
     results:                                    # 대상 results.csv 경로 (필수)

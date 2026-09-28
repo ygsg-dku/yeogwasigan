@@ -4,10 +4,12 @@ import java.nio.file.Path;
 import java.util.List;
 
 import com.capstone.yeogwasigan.core.config.AppProperties;
+import com.capstone.yeogwasigan.core.config.ExperimentConstants;
 import com.capstone.yeogwasigan.core.filter.AllowlistFilter;
 import com.capstone.yeogwasigan.core.filter.PassthroughFilter;
 import com.capstone.yeogwasigan.core.presidio.PresidioClient;
 import com.capstone.yeogwasigan.core.scenario.ScenarioRepository;
+import com.capstone.yeogwasigan.core.template.PurposeTemplate;
 import com.capstone.yeogwasigan.core.template.TemplateLoader;
 import com.capstone.yeogwasigan.core.tokenize.CaseScopedTokenizer;
 
@@ -37,6 +39,14 @@ public final class TestSupport {
 
     public static AllowlistFilter allowlist() {
         return new AllowlistFilter(templates(), new CaseScopedTokenizer(), new PresidioClient(props()));
+    }
+
+    /** 같은 목록에 내부 재검사(정규식)만 켠 담기. */
+    public static AllowlistFilter allowlistWithInnerScan() {
+        PurposeTemplate t = templates().get(ExperimentConstants.PURPOSE_ID);
+        PurposeTemplate on = new PurposeTemplate(t.purposeId(), t.displayName(), t.description(), t.requiredFields(),
+                t.fieldActions(), t.onUnknownField(), true, PurposeTemplate.InnerScanEngine.REGEX);
+        return new AllowlistFilter(TemplateLoader.of(List.of(on)), new CaseScopedTokenizer(), new PresidioClient(props()));
     }
 
     public static PassthroughFilter passthrough() {

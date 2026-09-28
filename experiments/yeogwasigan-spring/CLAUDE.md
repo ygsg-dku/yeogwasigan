@@ -52,15 +52,27 @@ S3_productCatalogLockContention, S4_kafkaQueueProblems, S5_intlShippingSlowdown,
    - ③ 주입 흔적 제거 완료 — 팀 기준 `experiments/pilot/PROTOCOL.md` v1.3 을 따름 (설정 strip-phrases / drop-if-contains, 대소문자 구분):
      S6 `" Feature Flag Enabled"` 문구만 삭제(38건 ×2 속성), S4 FeatureFlag 로그 199+1건·S5 스위치 로그 6건 통째 삭제.
      스위치 속성 키 삭제는 통째 삭제 판정 뒤에(그 전에 지우면 흔적 로그를 놓침).
-     ⚠ S3 "lock contention scenario active…"(4건)는 PROTOCOL 규칙에 안 걸려 남아 있음 → 팀 결정 필요.
+     S3 "lock contention scenario active…"(4건)는 kangdaeun 이 drop 목록에 "scenario active"·스위치 이름 추가로 해결(9/27, 315→311건).
      S6 은 문구 삭제로 더 이상 담기 함정이 아님. 자연스러운 함정은 S2(`badAddress`가 exception.message 에만).
    - ④ 민감정보 주입 완료 (PROTOCOL v1.1 민감 키, 6자 이상). 적용 순서 ① → ③ → ② → ④ → ⑤.
      원문 span(`SpanPiiExtractor`)·로그의 민감 키 값 중 결과에 이미 있는 값 = 자연 발생, span 에만 있던 값은
      같은 traceId 로그(같은 서비스 우선)에 키마다 속성/본문 번갈아 최대 5개 주입 → `scenarios/<ID>/injected_pii.yaml`.
-     시나리오별 민감값 22~70개. 필터만 돌린 잔존(회): S1 그대로 44 / 담기 7, S6 198 / 43.
-     담기 잔존은 본문에 들어간 UUID(session.id·user.id·order.id)를 정규식 내부검사가 못 잡아서 — 실제 한계로 측정됨.
-     카드번호·이메일은 담기에서 0. CVV·lastFourDigits 는 6자 미만이라 PROTOCOL 기준대로 제외.
+     시나리오별 민감값 22~70개. (재검사 켠 상태에서 잰 잔존: S1 그대로 44 / 담기 7, S6 198 / 43 — 아래 재검사 끔 수치로 대체)
+     CVV·lastFourDigits 는 6자 미만이라 PROTOCOL 기준대로 제외.
+   - 담기 내부 재검사 끔 (2026-09-28, `innerScanOnKeptFields: false`, 템플릿에 없으면 기본 false):
+     PROTOCOL 의 담기 정의 = "원문에서 목록에 있는 필드만 남김". 재검사를 켜면 목록 효과와 탐지기 효과가 섞인다.
+     코드는 남겨 둠(비교용으로 켤 수 있음). 필터만 돌린 잔존(회) 그대로 / 담기: S1 44/11, S2 46/11, S3 50/7,
+     S4 118/16, S5 121/21, S6 198/47. 담기 잔존 = body 에 주입된 카드·이메일 + body 속 UUID.
    - 남음: truth.yaml 에 "꼭 남아야 할 증거" 적고 전처리 후 자동 검사.
+   - 키워드 자동 채점 (2026-09-28, `core/scoring/KeywordScorer`): D 가 로그 보기 전에 쓴 `scoring/scenarios.json` 을 그대로 읽음
+     (원본: 캡스톤/scenarios.json, 여기서 고치지 않음). 시나리오 이름이 폴더와 달라 첫 "_" 앞 접두어(S1…)로 연결.
+     서비스 적중/원인 적중 = ko+en 키워드 중 하나라도 답에 있으면(대소문자 무시). live 응답만 채점.
+     러너 results.csv 에 ai_mode·auto_service_hit·auto_cause_hit·auto_keywords 칸 추가(블라인드 파일에는 안 들어감).
+     ⚠ 리허설에 적용하면 서비스 12/12, 원인 11/12 적중 — 너무 느슨함: S2 담기 오답(Kafka)도 "결제"+"connection"으로 적중,
+     S5 그대로 "장애 없음"도 "shipping"+"slow"로 적중, S1 원인 키워드("실패/error")는 거의 모든 답에 있음. D·팀에 알려야 함.
+   - 결과 화면 `/results.html` (`web/ResultsController`, API `/api/runs`): results/<실행>/ 을 읽어 시나리오×방식 표(적중 ■□, 평균 잔존),
+     상세(답 + 걸린 키워드 반전, 보낸 로그 앞 300건). 채점은 읽을 때 다시 계산 → 예전 실행도 같은 기준. 데모 화면에서 링크.
+     데모 화면: [채점 기준] 선택(샘플 불러오면 접두어로 자동 선택) → 분석 후 자동 채점 표시.
 3. 시나리오마다 `truth.yaml`, `injected_pii.yaml` 작성
    - 리허설(2026-09-25, results/20260925_192043, 그대로+담기, 1회, ③④ 없음): S2도 함정 케이스였다 —
      정답 단서 `badAddress`가 exception.message/stacktrace 에만 있어 담기는 Kafka로 오답. S6도 예상대로 담기 오답.

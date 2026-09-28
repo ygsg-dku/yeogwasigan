@@ -14,10 +14,10 @@ import java.util.Set;
  * @param purposeId             목적 ID (예: INCIDENT_ANALYSIS)
  * @param displayName           화면 표시 이름
  * @param description           설명
- * @param requiredFields        원문 그대로(단, 내부 재검사 후) 담는 필드
+ * @param requiredFields        원문 그대로 담는 필드 (내부 재검사를 켜면 재검사 후)
  * @param fieldActions          담되 값을 바꿔서 내보내는 필드 → 변환 방식
  * @param onUnknownField        목록에 없는 필드 처리 (DROP 만 지원)
- * @param innerScanOnKeptFields 원문 그대로 담은 필드 내부를 한 번 더 검사할지
+ * @param innerScanOnKeptFields 원문 그대로 담은 필드 내부를 한 번 더 검사할지. 적지 않으면 false (PROTOCOL 의 담기 = 목록만)
  * @param innerScanEngine       내부 재검사 엔진 (REGEX | PRESIDIO)
  */
 public record PurposeTemplate(
@@ -39,7 +39,7 @@ public record PurposeTemplate(
         requiredFields = requiredFields == null ? List.of() : List.copyOf(requiredFields);
         fieldActions = fieldActions == null ? Map.of() : java.util.Collections.unmodifiableMap(new LinkedHashMap<>(fieldActions));
         onUnknownField = onUnknownField == null ? UnknownFieldPolicy.DROP : onUnknownField;
-        innerScanOnKeptFields = innerScanOnKeptFields == null || innerScanOnKeptFields;
+        innerScanOnKeptFields = innerScanOnKeptFields != null && innerScanOnKeptFields;
         innerScanEngine = innerScanEngine == null ? InnerScanEngine.REGEX : innerScanEngine;
     }
 

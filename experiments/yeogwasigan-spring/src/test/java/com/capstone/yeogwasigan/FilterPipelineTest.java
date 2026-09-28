@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,10 +48,12 @@ class FilterPipelineTest {
         assertTrue(r.droppedFields().contains("logRecord.attributes.user.email"));
         assertTrue(r.droppedFields().contains("resource.host.ip"));
 
-        // 정규식 innerScan 은 한글 이름을 못 잡는다 → body 안의 "박민지" 1건만 남는다 (담기의 한계도 측정됨)
+        // 내부 재검사를 하지 않으므로(PROTOCOL 의 담기 = 목록만) body 안의 민감값은 그대로 나간다:
+        // 계좌·이메일(2회)·이름·IP = 5회. 목록에 없는 필드(user.email 등)의 값은 나가지 않는다
         ResidualScorer.ResidualResult res = scorer.score(r.output(), s.injectedPii());
-        assertEquals(1, res.total());
-        assertEquals("박민지", res.detail().get(0).value());
+        assertEquals(5, res.total());
+        assertEquals(Set.of("110-432-778812", "minji.park@example.co.kr", "박민지", "10.20.31.45"),
+                res.detail().stream().map(ResidualScorer.Hit::value).collect(Collectors.toSet()));
     }
 
     @Test
@@ -79,8 +82,16 @@ class FilterPipelineTest {
     }
 
     @Test
-    void 담기_innerScan은_body_안의_이메일_계좌_IP를_토큰으로_바꾼다() {
+    void 담기는_담은_필드의_값을_고치지_않는다() {
         FilterResult r = TestSupport.allowlist().apply(s.raw(), s.id());
+        assertEquals(LogFormat.flatten(s.raw().get(5)).get("logRecord.body"),
+                LogFormat.flatten(r.output().get(5)).get("logRecord.body"));
+    }
+
+    @Test
+    void 내부_재검사를_켜면_body_안의_이메일_계좌_IP를_토큰으로_바꾼다() {
+        // 기본값은 꺼져 있다. 비교 실험용으로 켰을 때 동작만 확인한다
+        FilterResult r = TestSupport.allowlistWithInnerScan().apply(s.raw(), s.id());
         String body6 = String.valueOf(LogFormat.flatten(r.output().get(5)).get("logRecord.body"));
         assertFalse(body6.contains("minji.park@example.co.kr"));
         assertFalse(body6.contains("110-432-778812"));

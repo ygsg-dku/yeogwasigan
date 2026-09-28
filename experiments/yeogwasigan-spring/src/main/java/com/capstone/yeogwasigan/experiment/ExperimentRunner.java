@@ -32,7 +32,9 @@ import com.capstone.yeogwasigan.core.log.LogFormat;
 import com.capstone.yeogwasigan.core.presidio.PresidioClient;
 import com.capstone.yeogwasigan.core.scenario.Scenario;
 import com.capstone.yeogwasigan.core.scenario.ScenarioRepository;
+import com.capstone.yeogwasigan.core.scoring.KeywordScorer;
 import com.capstone.yeogwasigan.core.scoring.ResidualScorer;
+import com.capstone.yeogwasigan.core.template.PurposeTemplate;
 import com.capstone.yeogwasigan.core.template.TemplateLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -53,7 +55,8 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  *
  * 결과 (results/&lt;실행시각&gt;/)
  * <ul>
- *   <li>results.csv — scenario_id, filter, run_no, fields_before, fields_after, residual_pii_count, ai_answer, rca_score(빈칸)</li>
+ *   <li>results.csv — scenario_id, filter, run_no, fields_before, fields_after, residual_pii_count, ai_answer, rca_score(빈칸),
+ *       ai_mode(live/mock/error), auto_service_hit·auto_cause_hit·auto_keywords (키워드 자동 채점, 참고용)</li>
  *   <li>payloads/ — 조건별로 AI 에 "실제로 나간" 로그 (JSONL). 재현·검증용</li>
  *   <li>run_meta.json — 질문, 모델, temperature, AI 모드(live/mock), 템플릿, Presidio 설정 등 실험 조건 기록</li>
  * </ul>
@@ -69,7 +72,8 @@ public class ExperimentRunner implements CommandLineRunner {
 
     static final String[] CSV_HEADER = {
             "scenario_id", "filter", "run_no", "fields_before", "fields_after",
-            "residual_pii_count", "ai_answer", "rca_score"};
+            "residual_pii_count", "ai_answer", "rca_score",
+            "ai_mode", "auto_service_hit", "auto_cause_hit", "auto_keywords"};
 
     private final FilterRegistry filters;
     private final ResidualScorer scorer;
@@ -78,10 +82,11 @@ public class ExperimentRunner implements CommandLineRunner {
     private final TemplateLoader templates;
     private final PresidioClient presidio;
     private final AppProperties props;
+    private final KeywordScorer keywordScorer;
 
     public ExperimentRunner(FilterRegistry filters, ResidualScorer scorer, AiClient aiClient,
                             ScenarioRepository scenarios, TemplateLoader templates, PresidioClient presidio,
-                            AppProperties props) {
+                            AppProperties props, KeywordScorer keywordScorer) {
         this.filters = filters;
         this.scorer = scorer;
         this.aiClient = aiClient;
@@ -89,6 +94,7 @@ public class ExperimentRunner implements CommandLineRunner {
         this.templates = templates;
         this.presidio = presidio;
         this.props = props;
+        this.keywordScorer = keywordScorer;
     }
 
     @Override
@@ -116,11 +122,11 @@ public class ExperimentRunner implements CommandLineRunner {
 
         // 2) Presidio 를 쓰는 조건이 있으면 준비부터 확인 (AI 호출 비용을 쓰기 전에 실패시킨다)
         //    - 빼기(DENYLIST)
-        //    - 담기(ALLOWLIST) 인데 템플릿의 innerScanEngine 이 presidio 인 경우
+        //    - 담기(ALLOWLIST) 인데 템플릿에서 내부 재검사를 켜고 엔진을 presidio 로 둔 경우
+        PurposeTemplate tpl = templates.get(ExperimentConstants.PURPOSE_ID);
         boolean needsPresidio = exp.filters().contains(ExperimentConstants.DENYLIST)
                 || (exp.filters().contains(ExperimentConstants.ALLOWLIST)
-                && templates.get(ExperimentConstants.PURPOSE_ID).innerScanEngine()
-                == com.capstone.yeogwasigan.core.template.PurposeTemplate.InnerScanEngine.PRESIDIO);
+                && tpl.innerScanOnKeptFields() && tpl.innerScanEngine() == PurposeTemplate.InnerScanEngine.PRESIDIO);
         List<String> presidioEntities = List.of();
         if (needsPresidio) {
             log.info("Presidio 준비 확인 중: {} / {}", presidio.analyzerUrl(), presidio.anonymizerUrl());
@@ -165,6 +171,11 @@ public class ExperimentRunner implements CommandLineRunner {
         presidioMeta.put("skipFields", props.presidio().skipFields());
         presidioMeta.put("supportedEntities", presidioEntities);   // Presidio 버전이 바뀌면 이 목록이 달라질 수 있다
         meta.put("presidio", presidioMeta);
+        Map<String, Object> scoringMeta = new LinkedHashMap<>();
+        scoringMeta.put("keywordsFile", keywordScorer.source().toString());
+        scoringMeta.put("available", keywordScorer.available());
+        scoringMeta.put("meta", keywordScorer.meta());
+        meta.put("autoScoring", scoringMeta);
 
         // 4) 본 실험
         int total = list.size() * filterList.size() * exp.runs();
@@ -182,14 +193,21 @@ public class ExperimentRunner implements CommandLineRunner {
 
                             Files.writeString(payloadDir.resolve(s.id() + "__" + filter.name() + "__run" + run + ".jsonl"),
                                     LogFormat.serialize(r.output()) + "\n", StandardCharsets.UTF_8);
+                            // 오류·mock 응답은 채점하지 않는다 (빈칸)
+                            KeywordScorer.Score auto = "live".equals(answer.mode())
+                                    ? keywordScorer.score(s.id(), answer.text()).orElse(null) : null;
                             csv.printRecord(s.id(), filter.name(), run, r.fieldsBefore(), r.fieldsAfter(),
-                                    residual, answer.text(), "");
+                                    residual, answer.text(), "", answer.mode(),
+                                    auto == null ? "" : auto.serviceHit() ? 1 : 0,
+                                    auto == null ? "" : auto.causeHit() ? 1 : 0,
+                                    auto == null ? "" : String.join("|", concat(auto.serviceMatched(), auto.causeMatched())));
                             csv.flush();
 
                             done++;
-                            log.info("[{}/{}] {} {} run{}  필드 {}→{}  잔존 {}  AI={}", done, total, s.id(),
-                                    String.format("%-11s", filter.name()), run, r.fieldsBefore(), r.fieldsAfter(),
-                                    residual, answer.mode());
+                            log.info("[{}/{}] {} {} run{}  필드 {}→{}  잔존 {}  AI={}  자동채점 서비스={} 원인={}", done, total,
+                                    s.id(), String.format("%-11s", filter.name()), run, r.fieldsBefore(), r.fieldsAfter(),
+                                    residual, answer.mode(), auto == null ? "-" : auto.serviceHit() ? "O" : "X",
+                                    auto == null ? "-" : auto.causeHit() ? "O" : "X");
                             if ("error".equals(answer.mode())) {
                                 log.warn("    {}", answer.text());
                             }
@@ -203,6 +221,12 @@ public class ExperimentRunner implements CommandLineRunner {
         new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
                 .writeValue(runDir.resolve("run_meta.json").toFile(), meta);
         return csvPath;
+    }
+
+    private static List<String> concat(List<String> a, List<String> b) {
+        List<String> out = new ArrayList<>(a);
+        out.addAll(b);
+        return out;
     }
 
     private static Path relative(Path p) {
