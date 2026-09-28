@@ -12,6 +12,11 @@ requiredFields:
   - logRecord.traceId              # 같은 요청인가
   - logRecord.spanId               # 호출 관계
   - logRecord.parentSpanId
+  # 원인 분석용 속성 (9/28 추가: 파일럿 로그에서 S1·S2·S6 원인이 이 칸에 있음. S2 badAddress 는 여기에만 있다)
+  - logRecord.attributes.exception.message    # 에러 메시지
+  - logRecord.attributes.exception.type       # 에러 종류
+  - logRecord.attributes.url.path             # 요청 경로 (상품 ID 등)
+  - logRecord.attributes.http.response.status_code  # 응답 코드 (5xx)
 
 # 담되, 값을 바꿔서 내보내는 필드.
 # ※ fieldActions 에 적힌 필드는 "변환해서 담는다"는 뜻이므로 requiredFields 에 없어도 담긴다.

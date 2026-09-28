@@ -44,7 +44,7 @@ class FilterPipelineTest {
     void 담기는_템플릿에_있는_필드만_나간다() {
         FilterResult r = TestSupport.allowlist().apply(s.raw(), s.id());
         assertEquals(49, r.fieldsBefore());
-        assertEquals(9, r.fieldsAfter());   // requiredFields 7 + fieldActions 전용 2 (host.name, container.id)
+        assertEquals(12, r.fieldsAfter());  // requiredFields 7 + 원인 속성 중 샘플에 있는 3 + fieldActions 전용 2 (host.name, container.id)
         assertTrue(r.droppedFields().contains("logRecord.attributes.user.email"));
         assertTrue(r.droppedFields().contains("resource.host.ip"));
 
