@@ -90,9 +90,16 @@ public class AllowlistFilter implements LogFilter {
         List<Map<String, Object>> output = new ArrayList<>(logs.size());
         for (Map<String, Object> rec : logs) {
             Map<String, Object> kept = new LinkedHashMap<>();
-            for (Map.Entry<String, Object> e : LogFormat.flatten(rec).entrySet()) {
+            Map<String, Object> flat = LogFormat.flatten(rec);
+            boolean dropBody = tpl.bodyOnlyWhenImportant() && !important(flat);
+            for (Map.Entry<String, Object> e : flat.entrySet()) {
                 String path = e.getKey();
                 Object value = e.getValue();
+
+                // 본문은 경고 이상·5xx 기록에서만 담는다 (bodyOnlyWhenImportant)
+                if (dropBody && BODY.equals(path)) {
+                    continue;
+                }
 
                 // ① 목록에 없으면 버린다 (onUnknownField: DROP)
                 if (!allowed.contains(path)) {
@@ -124,6 +131,25 @@ public class AllowlistFilter implements LogFilter {
         notes.put("innerScanEngine", tpl.innerScanEngine().name());
         notes.put("innerScanHits", innerHits);
         return FilterResult.of(logs, output, transformed, notes);
+    }
+
+    private static final String BODY = "logRecord.body";
+    private static final Pattern ACCESS_LOG_5XX = Pattern.compile("\" 5\\d\\d ");
+
+    /** WARN 이상이거나 5xx 응답인 기록인가. 프록시 접근 로그는 상태 코드가 본문 안에만 있다. */
+    static boolean important(Map<String, Object> flat) {
+        Object num = flat.get("logRecord.severityNumber");
+        if (num instanceof Number n && n.intValue() >= 13) {
+            return true;
+        }
+        String sev = String.valueOf(flat.getOrDefault("logRecord.severityText", "")).toUpperCase();
+        if (sev.startsWith("WARN") || sev.startsWith("ERR") || sev.startsWith("FATAL")) {
+            return true;
+        }
+        if (String.valueOf(flat.get("logRecord.attributes.http.response.status_code")).startsWith("5")) {
+            return true;
+        }
+        return ACCESS_LOG_5XX.matcher(String.valueOf(flat.getOrDefault(BODY, ""))).find();
     }
 
     @FunctionalInterface

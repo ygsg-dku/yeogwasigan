@@ -37,6 +37,10 @@ onUnknownField: DROP               # 목록에 없으면 버린다 (담기의 �
 # "목록만으로 원인을 찾는가 / 민감정보가 얼마나 나가는가"를 따로 볼 수 없다.
 innerScanOnKeptFields: false
 
+# 본문은 WARN 이상·5xx 응답 기록에서만 담는다. 정상(INFO) 기록 본문에 섞인 ID가 빠진다.
+# 9/28 파일럿: 원인 적중 그대로(3.5/4), 누출 114→66. 같은 내용 한 번만(반복 제거)은 S3 시간 흐름을 지워서 채택 안 함
+bodyOnlyWhenImportant: true
+
 # 내부 재검사 엔진 (innerScanOnKeptFields: true 일 때만 쓰인다)
 #   regex    : AllowlistFilter 의 정규식 (기본값, 원안)
 #   presidio : [B] 빼기와 똑같은 Presidio 기본 엔진

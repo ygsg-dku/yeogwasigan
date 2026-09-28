@@ -103,6 +103,18 @@ class FilterPipelineTest {
     }
 
     @Test
+    void 기본_담기는_본문을_경고_이상_기록에서만_담는다() {
+        List<Map<String, Object>> logs = LogFormat.parse(
+                "{\"resource\":{\"service.name\":\"cart\"},\"scope\":{},\"logRecord\":{\"severityText\":\"INFO\",\"body\":\"user 1234-abcd added item\"}}\n"
+                        + "{\"resource\":{\"service.name\":\"payment\"},\"scope\":{},\"logRecord\":{\"severityText\":\"WARN\",\"body\":\"Payment request failed\"}}\n"
+                        + "{\"resource\":{\"service.name\":\"frontend-proxy\"},\"scope\":{},\"logRecord\":{\"body\":\"GET /api/products/X HTTP/1.1\\\" 504 UT\"}}");
+        String sent = LogFormat.serialize(TestSupport.allowlistBodyImportantOnly().apply(logs, "t").output());
+        assertFalse(sent.contains("1234-abcd"));          // INFO 본문은 빠진다
+        assertTrue(sent.contains("Payment request failed")); // WARN 본문은 남는다
+        assertTrue(sent.contains("504 UT"));               // 프록시 5xx 본문도 남는다
+    }
+
+    @Test
     void 담기는_처음_보는_필드도_버린다() {
         List<Map<String, Object>> logs = LogFormat.parse(
                 "{\"resource\":{\"service.name\":\"payment\",\"brand.new.secret\":\"s3cr3t\"},\"scope\":{},"

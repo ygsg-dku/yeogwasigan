@@ -37,16 +37,26 @@ public final class TestSupport {
         }
     }
 
+    /** 칸 고르기만 하는 담기(본문 조건 끔). 필드 선택 자체를 검사하는 테스트용. */
     public static AllowlistFilter allowlist() {
-        return new AllowlistFilter(templates(), new CaseScopedTokenizer(), new PresidioClient(props()));
+        return withTemplate(false, false);
+    }
+
+    /** 실제 기본값: 본문은 WARN 이상·5xx 기록에서만 담는다. */
+    public static AllowlistFilter allowlistBodyImportantOnly() {
+        return withTemplate(false, true);
+    }
+
+    private static AllowlistFilter withTemplate(boolean innerScan, boolean bodyImportantOnly) {
+        PurposeTemplate t = templates().get(ExperimentConstants.PURPOSE_ID);
+        PurposeTemplate v = new PurposeTemplate(t.purposeId(), t.displayName(), t.description(), t.requiredFields(),
+                t.fieldActions(), t.onUnknownField(), innerScan, PurposeTemplate.InnerScanEngine.REGEX, bodyImportantOnly);
+        return new AllowlistFilter(TemplateLoader.of(List.of(v)), new CaseScopedTokenizer(), new PresidioClient(props()));
     }
 
     /** 같은 목록에 내부 재검사(정규식)만 켠 담기. */
     public static AllowlistFilter allowlistWithInnerScan() {
-        PurposeTemplate t = templates().get(ExperimentConstants.PURPOSE_ID);
-        PurposeTemplate on = new PurposeTemplate(t.purposeId(), t.displayName(), t.description(), t.requiredFields(),
-                t.fieldActions(), t.onUnknownField(), true, PurposeTemplate.InnerScanEngine.REGEX);
-        return new AllowlistFilter(TemplateLoader.of(List.of(on)), new CaseScopedTokenizer(), new PresidioClient(props()));
+        return withTemplate(true, false);
     }
 
     public static PassthroughFilter passthrough() {
