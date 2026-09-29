@@ -23,8 +23,6 @@ requiredFields:
 #   (그렇지 않으면 container.id / host.name 은 onUnknownField: DROP 으로 먼저 버려져서
 #    가명화 규칙이 적용될 일이 없다.)
 fieldActions:
-  resource.container.id: PSEUDONYMIZE_CASE_SCOPED
-  resource.host.name: PSEUDONYMIZE_CASE_SCOPED
   logRecord.traceId: TOKENIZE_CASE_SCOPED
   logRecord.spanId: TOKENIZE_CASE_SCOPED
   # 원안에는 없던 줄: spanId 만 토큰화하고 parentSpanId 를 원문으로 두면
