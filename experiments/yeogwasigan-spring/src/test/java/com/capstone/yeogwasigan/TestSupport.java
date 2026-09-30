@@ -51,7 +51,7 @@ public final class TestSupport {
         PurposeTemplate t = templates().get(ExperimentConstants.PURPOSE_ID);
         PurposeTemplate v = new PurposeTemplate(t.purposeId(), t.displayName(), t.description(), t.requiredFields(),
                 t.fieldActions(), t.onUnknownField(), innerScan, PurposeTemplate.InnerScanEngine.REGEX, bodyImportantOnly);
-        return new AllowlistFilter(TemplateLoader.of(List.of(v)), new CaseScopedTokenizer(), new PresidioClient(props()));
+        return new AllowlistFilter(TemplateLoader.of(List.of(v)), new CaseScopedTokenizer("test-secret"), new PresidioClient(props()));
     }
 
     /** 같은 목록에 내부 재검사(정규식)만 켠 담기. */

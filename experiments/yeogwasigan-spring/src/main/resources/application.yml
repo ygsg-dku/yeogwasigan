@@ -20,6 +20,8 @@ yeogwasigan:
   # 프로젝트 루트 기준 상대경로 (bootRun 은 프로젝트 루트에서 실행된다)
   scenarios-dir: scenarios
   results-dir: results
+  # 사건 범위 토큰(TX_/PS_)의 HMAC 비밀키. 비우면 실행마다 무작위 키. 저장소에 값을 적지 말 것.
+  tokenize-secret: ${YG_TOKENIZE_SECRET:}
 
   presidio:
     # 호스트에서 bootRun 할 때는 docker-compose 가 열어 둔 5002/5001 포트로,
