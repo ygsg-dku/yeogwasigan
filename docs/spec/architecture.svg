@@ -1,0 +1,119 @@
+<svg viewBox="0 0 960 560" width="1920" height="1120" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans KR, Apple SD Gothic Neo, Malgun Gothic, sans-serif" aria-label="여과시간 게이트웨이 전체 구성 (설계안 v0.2)">
+<style>
+.panel { fill: none; stroke: #d7dde3; stroke-width: 1.5; stroke-dasharray: 6 5; }
+.box { fill: #ffffff; stroke: #d7dde3; stroke-width: 1.5; }
+.gw { fill: #e2eff3; stroke: #1b6a83; stroke-width: 2; }
+.step { fill: #ffffff; stroke: #1b6a83; stroke-width: 1.2; }
+.aside { fill: #ffffff; stroke: #5a6470; stroke-width: 1.2; stroke-dasharray: 4 3; }
+.blocked { fill: #f8e5e3; stroke: #a3322a; stroke-width: 1.2; }
+.allowed { fill: #ffffff; stroke: #1b6a83; stroke-width: 2; }
+.t { fill: #151a1f; font-size: 13px; font-weight: 500; }
+.tb { fill: #151a1f; font-size: 15px; font-weight: 700; }
+.s { fill: #5a6470; font-size: 11px; }
+.sa { fill: #1b6a83; font-size: 11.5px; font-weight: 500; }
+.sb { fill: #a3322a; font-size: 11.5px; font-weight: 500; }
+.flow { stroke: #5a6470; stroke-width: 1.5; fill: none; }
+.ok { stroke: #1b6a83; stroke-width: 2; fill: none; }
+.no { stroke: #a3322a; stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+.edge { stroke: #151a1f; stroke-width: 1.5; stroke-dasharray: 2 4; }
+.mk { fill: #5a6470; }
+.mka { fill: #1b6a83; }
+.x { stroke: #a3322a; stroke-width: 2.5; }
+</style>
+<rect x="0" y="0" width="960" height="560" fill="#ffffff"/>
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ara" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mka" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+
+        <rect class="panel" x="12" y="28" width="640" height="520" rx="10"/>
+        <rect class="panel" x="700" y="28" width="248" height="520" rx="10"/>
+        <line class="edge" x1="676" y1="30" x2="676" y2="546"/>
+        <text class="s" x="676" y="18" text-anchor="middle">인터넷 경계 (기존 프록시·방화벽)</text>
+        <text class="s" x="28" y="538">내부 업무망 · Docker 네트워크 internal</text>
+        <text class="s" x="716" y="538">외부 · Docker 네트워크 external</text>
+
+        <rect class="box" x="36" y="70" width="180" height="54" rx="6"/>
+        <text class="t" x="126" y="93" text-anchor="middle">업무 서비스들</text>
+        <text class="s" x="126" y="110" text-anchor="middle">실험: OTel Demo 23개</text>
+        <rect class="box" x="36" y="150" width="180" height="54" rx="6"/>
+        <text class="t" x="126" y="173" text-anchor="middle">로그 수집기</text>
+        <text class="s" x="126" y="190" text-anchor="middle">OTel Collector</text>
+        <rect class="box" x="36" y="230" width="180" height="54" rx="6"/>
+        <text class="t" x="126" y="253" text-anchor="middle">로그 저장소</text>
+        <text class="s" x="126" y="270" text-anchor="middle">OTel JSONL 파일</text>
+        <rect class="box" x="36" y="330" width="180" height="54" rx="6"/>
+        <text class="t" x="126" y="353" text-anchor="middle">요청자 · 운영 담당</text>
+        <text class="s" x="126" y="370" text-anchor="middle">장애 구간 로그 업로드</text>
+        <rect class="box" x="36" y="430" width="180" height="54" rx="6"/>
+        <text class="t" x="126" y="453" text-anchor="middle">승인자 · 보안 담당</text>
+        <text class="s" x="126" y="470" text-anchor="middle">요청자와 다른 사람</text>
+        <path class="flow" d="M126,124 L126,148" marker-end="url(#ar)"/>
+        <path class="flow" d="M126,204 L126,228" marker-end="url(#ar)"/>
+        <path class="flow" d="M126,284 L126,328" marker-end="url(#ar)"/>
+        <text class="s" x="134" y="310">장애 구간만</text>
+        <path class="flow" d="M216,352 L236,352 L236,132 L270,132" marker-end="url(#ar)"/>
+                <path class="flow" d="M216,452 L246,452 L246,248 L270,248" marker-end="url(#ar)"/>
+        <text class="s" x="222" y="444">승인</text>
+
+        <rect class="gw" x="256" y="56" width="260" height="400" rx="10"/>
+        <text class="tb" x="386" y="80" text-anchor="middle">여과시간 게이트웨이</text>
+        <text class="s" x="386" y="97" text-anchor="middle">Spring Boot 앱 · 내부망 VM 1대 · 새 장비 없음</text>
+        <rect class="step" x="272" y="108" width="228" height="48" rx="5"/>
+        <text class="t" x="386" y="128" text-anchor="middle">① 로그 입력 · 전처리</text>
+        <text class="s" x="386" y="145" text-anchor="middle">게이트웨이용 설정 · 원문은 메모리만</text>
+        <rect class="step" x="272" y="166" width="228" height="48" rx="5"/>
+        <text class="t" x="386" y="186" text-anchor="middle">② 10필드 · 토큰화 → 파생본</text>
+        <text class="s" x="386" y="203" text-anchor="middle">목록 밖 DROP · 참고 경고 표시</text>
+        <rect class="step" x="272" y="224" width="228" height="48" rx="5"/>
+        <text class="t" x="386" y="244" text-anchor="middle">③ 미리보기 · 승인</text>
+        <text class="s" x="386" y="261" text-anchor="middle">자기 요청 승인 불가 · 지문 기록</text>
+        <rect class="step" x="272" y="282" width="228" height="48" rx="5"/>
+        <text class="t" x="386" y="302" text-anchor="middle">④ 지문 확인 → 등록 주소로 전송</text>
+        <text class="s" x="386" y="319" text-anchor="middle">파생본 · 목록 버전 · 전송 대상</text>
+        <rect class="step" x="272" y="340" width="228" height="48" rx="5"/>
+        <text class="t" x="386" y="360" text-anchor="middle">⑤ AI 답 · 감사 기록</text>
+        <text class="s" x="386" y="377" text-anchor="middle">감사 기록은 추가만 가능</text>
+        <path class="flow" d="M386,156 L386,164" marker-end="url(#ar)"/>
+        <path class="flow" d="M386,214 L386,222" marker-end="url(#ar)"/>
+        <path class="flow" d="M386,272 L386,280" marker-end="url(#ar)"/>
+        <path class="flow" d="M386,330 L386,338" marker-end="url(#ar)"/>
+        <text class="sa" x="386" y="410" text-anchor="middle">게이트웨이만 내부·외부 네트워크에 모두 연결</text>
+        <text class="s" x="386" y="428" text-anchor="middle">한계: 원문 처리와 외부 연결이 한 서버</text>
+        <text class="s" x="386" y="444" text-anchor="middle">다음 단계: 전송 서버 분리</text>
+
+        <rect class="allowed" x="532" y="126" width="112" height="44" rx="6"/>
+        <text class="t" x="588" y="145" text-anchor="middle">목록 v1 · 동결</text>
+        <text class="s" x="588" y="161" text-anchor="middle">RCA 10필드</text>
+        <path class="flow" d="M532,148 L522,148 L522,182 L502,182" marker-end="url(#ar)"/>
+        <rect class="allowed" x="532" y="210" width="112" height="44" rx="6"/>
+        <text class="t" x="588" y="229" text-anchor="middle">토큰 비밀키</text>
+        <text class="s" x="588" y="245" text-anchor="middle">환경변수 · 운영은 KMS</text>
+        <path class="flow" d="M532,232 L522,232 L522,200 L502,200" marker-end="url(#ar)"/>
+        <rect class="box" x="532" y="344" width="112" height="56" rx="6"/>
+        <text class="t" x="588" y="364" text-anchor="middle">DB</text>
+        <text class="s" x="588" y="379" text-anchor="middle">요청·파생본(30일)</text>
+        <text class="s" x="588" y="393" text-anchor="middle">지문·감사 · 원문 없음</text>
+        <path class="flow" d="M500,364 L530,364" marker-end="url(#ar)"/>
+        <rect class="aside" x="532" y="424" width="112" height="44" rx="6"/>
+        <text class="t" x="588" y="443" text-anchor="middle">Presidio</text>
+        <text class="s" x="588" y="459" text-anchor="middle">실험 비교 전용</text>
+
+        <rect class="blocked" x="716" y="110" width="216" height="54" rx="6"/>
+        <text class="t" x="824" y="133" text-anchor="middle">미등록 주소</text>
+        <text class="s" x="824" y="150" text-anchor="middle">게이트웨이도 보낼 수 없음</text>
+        <text class="sb" x="824" y="186" text-anchor="middle">내부 서버의 직접 외부 호출도 차단</text>
+        <rect class="allowed" x="716" y="280" width="216" height="60" rx="6"/>
+        <text class="t" x="824" y="305" text-anchor="middle">등록된 AI API</text>
+        <text class="s" x="824" y="323" text-anchor="middle">gpt-5.1 · 설정 파일의 주소만</text>
+        <path class="ok" d="M500,298 L712,298" marker-end="url(#ara)"/>
+        <text class="sa" x="590" y="290" text-anchor="middle">지문 확인된 파생본만</text>
+        <path class="flow" d="M716,322 L504,322" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <text class="s" x="606" y="336" text-anchor="middle">AI 답</text>
+        <path class="no" d="M664,298 L664,137 L712,137"/>
+        <line class="x" x1="684" y1="129" x2="700" y2="145"/>
+        <line class="x" x1="700" y1="129" x2="684" y2="145"/>
+        <path class="no" d="M126,70 L126,44 L668,44"/>
+        <line class="x" x1="668" y1="36" x2="684" y2="52"/>
+        <line class="x" x1="684" y1="36" x2="668" y2="52"/>
+      </svg>

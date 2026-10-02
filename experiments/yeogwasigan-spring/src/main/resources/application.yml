@@ -1,0 +1,117 @@
+# 여과시간 설정
+# - 기본 프로파일: 웹 데모 (http://localhost:8080)
+# - experiment 프로파일: 실험 일괄 실행 후 종료 (application-experiment.yml)
+# - blind 프로파일: 블라인드 채점 파일 생성/병합 후 종료 (application-blind.yml)
+
+spring:
+  application:
+    name: yeogwasigan
+  main:
+    banner-mode: off
+  config:
+    # bootRun / java -jar 로 호스트에서 실행할 때도 프로젝트 루트의 .env(API 키 등)를 읽는다.
+    # 컨테이너에는 .env 가 없으므로(.dockerignore) docker-compose 의 environment 값이 쓰인다.
+    import: optional:file:.env[.properties]
+
+server:
+  port: 8080
+
+yeogwasigan:
+  # 프로젝트 루트 기준 상대경로 (bootRun 은 프로젝트 루트에서 실행된다)
+  scenarios-dir: scenarios
+  results-dir: results
+  # 사건 범위 토큰(TX_/PS_)의 HMAC 비밀키. 비우면 실행마다 무작위 키. 저장소에 값을 적지 말 것.
+  tokenize-secret: ${YG_TOKENIZE_SECRET:}
+
+  presidio:
+    # 호스트에서 bootRun 할 때는 docker-compose 가 열어 둔 5002/5001 포트로,
+    # 컨테이너로 실행할 때는 docker-compose 의 환경변수(컨테이너 이름:3000)로 연결된다.
+    analyzer-url: ${PRESIDIO_ANALYZER_URL:http://localhost:5002}
+    anonymizer-url: ${PRESIDIO_ANONYMIZER_URL:http://localhost:5001}
+    language: en            # Presidio 기본 지원 언어. 한국어 모델은 기본 제공되지 않는다.
+    timeout: 30s
+    # [B] 빼기에서 검사를 건너뛸 필드 경로. 기본값은 "없음"(= 모든 필드 검사).
+    # Presidio 기본 설정은 timeUnixNano·버전 문자열을 <DATE_TIME> 등으로 과잉 마스킹할 수 있다.
+    # 그것도 빼기 방식의 실제 특성이므로 기본은 비워 둔다. 바꾸려면 "실험 시작 전에" 정하고 끝까지 유지할 것.
+    #   예) [logRecord.timeUnixNano, logRecord.observedTimeUnixNano, logRecord.traceId, logRecord.spanId, logRecord.parentSpanId]
+    skip-fields: []
+
+  ai:
+    provider: ${YG_AI_PROVIDER:anthropic}      # anthropic | openai
+    model: ${YG_AI_MODEL:}                      # 비우면 제공자별 기본 모델 (AiClient 참고). 실험 기간 동안 고정할 것
+    max-tokens: ${YG_AI_MAX_TOKENS:1024}
+    timeout: 120s
+    mock: ${YG_AI_MOCK:false}                   # true 면 API 키가 있어도 mock 모드
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    openai-api-key: ${OPENAI_API_KEY:}
+    # temperature 는 설정으로 바꿀 수 없다. 코드에서 0 으로 고정 (ExperimentConstants.TEMPERATURE)
+
+  experiment:
+    runs: 3                                     # 조건별 반복 횟수 (AI 응답 흔들림 보정)
+    scenarios: []                               # 비우면 scenarios/ 아래 전체
+    filters: [PASSTHROUGH, DENYLIST, ALLOWLIST]
+    presidio-wait: 120s                         # 빼기 조건 실행 전 Presidio 준비를 기다리는 최대 시간
+
+  # 공통 전처리 규칙. 실험(preprocess 프로파일)과 웹 데모의 [공통 전처리] 옵션이 같은 규칙을 쓴다.
+  # 세 조건에 똑같이 적용되므로 실험 시작 전에 정하고 끝까지 유지할 것. 대상 시나리오 목록은 application-preprocess.yml.
+  preprocess:
+    source-dir: ../pilot/scenarios   # 레포의 pilot 수집 로그 (gunzip -k 로 .jsonl.gz 를 먼저 풀 것)
+
+    # ① 실험 장비 로그 제거
+    exclude-services: [load-generator, otelcol-contrib, flagd, flagd-ui]   # 가짜 트래픽 발생기, 수집기 자체 로그, 장애 스위치
+    exclude-attribute-prefixes: [feature_flag, demo.feature_flag.]          # PROTOCOL v1.1. feature_flag.key, feature_flag_key 등
+    exclude-body-contains: ["/flagservice/"]                                # 프록시를 거친 flagd 호출 접속 로그
+
+    # ③ 주입 흔적 제거 (experiments/pilot/PROTOCOL.md v1.3 "주입 흔적 규칙 보강"). 대소문자 구분
+    # 문구만 지운다: 장애 자체인 에러는 남기고 스위치 문구만 뺀다 (S6 "Error: Product Catalog Fail Feature Flag Enabled" → "Error: Product Catalog Fail")
+    strip-phrases: [" Feature Flag Enabled"]
+    # 통째로 뺀다: logRecord 의 body·속성(키 또는 값)에 아래 문자열이 있으면 레코드 삭제 (문구 삭제 뒤에 판정)
+    drop-if-contains:
+      - feature flag            # S5 shipping "…due to intlShippingSlowdown feature flag"
+      - FeatureFlag             # S4 fraud-detection "FeatureFlag 'kafkaQueueProblems' is enabled…"
+      - feature_flag            # feature_flag_key 등 스위치 속성이 붙은 로그
+      - scenario active         # S3 product-catalog "lock contention scenario active: holding … lock"
+      # 파일럿 시나리오의 스위치 이름 (pilot.py 로 켠 flagd 플래그)
+      - paymentFailure
+      - paymentUnreachable
+      - productCatalogFailure
+      - productCatalogLockContention
+      - kafkaQueueProblems
+      - intlShippingSlowdown
+      - emitRawPii
+
+    # ② 반복 로그 줄이기 (WARN 이상·HTTP 5xx 는 항상 전부 남긴다)
+    keep-first: 5
+    keep-last: 1
+    keep-slowest: 3
+
+    # ④ 민감정보 주입 (PROTOCOL v1.1 "민감 키 정의"). 로그에는 민감값이 거의 없고 span 에만 있으므로,
+    #    같은 수집의 span 에 실제로 있던 값을 traceId 가 같은 로그로 옮겨 넣는다. 넣는 자리는 키마다 속성/본문 번갈아.
+    #    원본 로그에 이미 있던 값은 "자연 발생"으로 같이 센다. 결과: scenarios/<ID>/injected_pii.yaml
+    pii-keys:
+      - demo.payment.card_number
+      - demo.payment.card_cvv        # 3자리라 pii-min-length 에 걸려 실제로는 세지 않는다 (PROTOCOL 기준 그대로)
+      - lastFourDigits               # 4자리 — 위와 같음
+      - user.id
+      - session.id
+      - user.email
+      - demo.order.id
+      - demo.shipping.tracking.id
+      - transactionId
+      - transaction_id
+      - tracking_id
+    pii-min-length: 6                # PROTOCOL v1.1: 값 6자 이상
+    pii-max-per-key: 5               # 키마다 새로 넣는 값 최대 개수 (시나리오 간 개수 차이 완화)
+
+    # ⑤ '그대로' 기준 추정 토큰 상한 (gpt-5.1 입력 한도 약 27만 토큰보다 여유 있게)
+    max-input-tokens: 250000
+
+  # 키워드 자동 채점 기준 (PROTOCOL v1.2: 판정 키워드는 D 가 로그를 보기 전에 작성). 파일이 없으면 채점하지 않는다
+  scoring:
+    keywords-file: scoring/scenarios.json
+
+  blind:
+    action: prepare                             # prepare | merge
+    results:                                    # 대상 results.csv 경로 (필수)
+    seed:                                       # 재현용 시드. 비우면 매번 다르게 섞인다
+    normalize: true                             # 응답 안의 토큰·마스킹 표식·민감값을 [가림]으로 바꿀지
