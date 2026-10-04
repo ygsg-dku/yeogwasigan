@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.capstone.yeogwasigan.core.presidio.PresidioUnavailableException;
 
@@ -23,6 +24,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, String>> unreadable(HttpMessageNotReadableException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("detail", "요청 본문(JSON)을 읽을 수 없습니다."));
+    }
+
+    /** 게이트웨이: 401 사용자 아님, 403 권한 없음·자기 요청, 404 요청 없음, 409 승인 대기가 아님·파생본 다름 */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> status(ResponseStatusException e) {
+        return ResponseEntity.status(e.getStatusCode()).body(Map.of("detail", String.valueOf(e.getReason())));
     }
 
     /** Presidio 컨테이너가 없거나 아직 준비 중 → 503 (빼기 결과를 원본으로 대체하지 않는다) */
