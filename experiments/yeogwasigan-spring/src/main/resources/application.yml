@@ -88,6 +88,10 @@ yeogwasigan:
       - kafkaQueueProblems
       - intlShippingSlowdown
       - emitRawPii
+      # E2 블라인드 시험의 새 장애 스위치 (로그를 보기 전, 10/5 수집 전에 추가)
+      - adFailure
+      - cartFailure
+      - recommendationCacheFailure
 
     # ② 반복 로그 줄이기 (WARN 이상·HTTP 5xx 는 항상 전부 남긴다)
     keep-first: 5
