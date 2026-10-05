@@ -1,0 +1,38 @@
+# 반출 게이트웨이 네트워크 분리 시연 (설계안 v0.2 "우회 경로 없음")
+#
+#   (Docker 컨텍스트가 여러 개면 앞에 DOCKER_CONTEXT=colima-pilot 처럼 지정)
+#   docker compose -f docker-compose.gateway.yml up -d --build
+#   ./scripts/network-demo.sh                  # 세 가지 연결을 차례로 시험
+#   docker compose -f docker-compose.gateway.yml down
+#
+# 망 두 개:
+#   internal  — 인터넷으로 나가는 길이 없는 내부 업무망 (internal: true)
+#   external  — 인터넷에 닿는 망
+# 게이트웨이만 두 망에 모두 붙는다. 내부 클라이언트는 internal 에만 있어서
+# 외부 AI 를 직접 부르면 실패하고, 게이트웨이를 거치는 길만 열려 있다.
+name: yeogwasigan-gateway-demo   # 실험용 docker-compose.yml(Presidio)과 섞이지 않게 프로젝트를 나눈다
+services:
+  gateway:
+    build: .
+    ports: ["8090:8080"]                 # 브라우저로 /gateway.html 을 볼 때 (호스트 → 게이트웨이)
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      YG_AI_PROVIDER: ${YG_AI_PROVIDER:-openai}
+      YG_AI_MODEL: ${YG_AI_MODEL:-}
+      YG_AI_MOCK: ${YG_AI_MOCK:-true}    # 기본은 mock. 실제 호출은 YG_AI_MOCK=false 로 띄울 때만
+      YG_TOKENIZE_SECRET: ${YG_TOKENIZE_SECRET:-}
+    volumes:
+      - ./scenarios:/app/scenarios:ro
+    networks: [internal, external]
+
+  # 내부 업무망의 다른 서버 역할. 게이트웨이 말고는 아무 데도 못 나간다.
+  internal-client:
+    image: curlimages/curl:8.10.1
+    command: ["sleep", "infinity"]
+    networks: [internal]
+
+networks:
+  internal:
+    internal: true
+  external: {}

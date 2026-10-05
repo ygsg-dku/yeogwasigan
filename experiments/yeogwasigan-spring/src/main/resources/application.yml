@@ -23,6 +23,15 @@ yeogwasigan:
   # 사건 범위 토큰(TX_/PS_)의 HMAC 비밀키. 비우면 실행마다 무작위 키. 저장소에 값을 적지 말 것.
   tokenize-secret: ${YG_TOKENIZE_SECRET:}
 
+  # 반출 게이트웨이 (/gateway.html). 사용자는 X-User 헤더로 구분하는 시연용 고정 계정이다.
+  # lead-kang 은 두 역할을 다 가져서 "자기 요청은 승인 못 함"(403)을 시연할 수 있다.
+  gateway:
+    users:
+      ops-kim: [REQUESTER]
+      sec-park: [APPROVER]
+      lead-kang: [REQUESTER, APPROVER]
+    endpoints: ["${YG_AI_PROVIDER:anthropic}"]   # 등록된 전송 대상. 지금은 설정된 AI 제공자 1곳뿐(D6)
+
   presidio:
     # 호스트에서 bootRun 할 때는 docker-compose 가 열어 둔 5002/5001 포트로,
     # 컨테이너로 실행할 때는 docker-compose 의 환경변수(컨테이너 이름:3000)로 연결된다.
@@ -79,6 +88,10 @@ yeogwasigan:
       - kafkaQueueProblems
       - intlShippingSlowdown
       - emitRawPii
+      # E2 블라인드 시험의 새 장애 스위치 (로그를 보기 전, 10/5 수집 전에 추가)
+      - adFailure
+      - cartFailure
+      - recommendationCacheFailure
 
     # ② 반복 로그 줄이기 (WARN 이상·HTTP 5xx 는 항상 전부 남긴다)
     keep-first: 5

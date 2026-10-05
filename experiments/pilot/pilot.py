@@ -39,7 +39,9 @@ def flag(name, variant):
 
 
 def reset():
-    sh("git", "-C", str(DEMO), "checkout", "--", "src/flagd/demo.flagd.json")
+    # git checkout 은 파일을 바꿔치기(REMOVE)해서, 연달아 하면 flagd 가 파일 감시를 놓친다(10/5 확인).
+    # 원래 내용을 같은 파일에 다시 쓴다(WRITE 이벤트만 생긴다)
+    FLAGS.write_text(sh("git", "-C", str(DEMO), "show", "HEAD:src/flagd/demo.flagd.json"))
     settle()
     print("플래그 원복")
 
