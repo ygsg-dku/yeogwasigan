@@ -12,6 +12,15 @@ spring:
     # bootRun / java -jar 로 호스트에서 실행할 때도 프로젝트 루트의 .env(API 키 등)를 읽는다.
     # 컨테이너에는 .env 가 없으므로(.dockerignore) docker-compose 의 environment 값이 쓰인다.
     import: optional:file:.env[.properties]
+  # 게이트웨이 요청·감사 기록 저장소. 기본은 H2 파일 DB(재시작해도 남는다). 운영은 --spring.profiles.active=postgres
+  datasource:
+    url: ${YG_DB_URL:jdbc:h2:file:./data/gateway;MODE=PostgreSQL;AUTO_SERVER=TRUE}
+    username: ${YG_DB_USER:sa}
+    password: ${YG_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
 
 server:
   port: 8080
@@ -31,6 +40,7 @@ yeogwasigan:
       sec-park: [APPROVER]
       lead-kang: [REQUESTER, APPROVER]
     endpoints: ["${YG_AI_PROVIDER:anthropic}"]   # 등록된 전송 대상. 지금은 설정된 AI 제공자 1곳뿐(D6)
+    payload-retention-days: 30   # 파생본 보관 일수. 지나면 파생본만 지우고 해시·감사 기록은 남긴다(D12)
 
   presidio:
     # 호스트에서 bootRun 할 때는 docker-compose 가 열어 둔 5002/5001 포트로,

@@ -4,17 +4,17 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -39,6 +39,7 @@ import com.capstone.yeogwasigan.preprocess.Preprocessor;
  *   <li>요청자와 승인자는 달라야 한다(D5).</li>
  *   <li>승인 지문 = SHA-256(파생본 해시 | 목록 버전 | 전송 대상). 전송 직전에 다시 계산해 다르면 보내지 않는다.</li>
  *   <li>등록된 전송 대상만 쓸 수 있다(D6). 전송 실패는 끝 상태이고 다시 보내려면 새 요청(D11).</li>
+ *   <li>요청과 감사 기록은 DB 에 남는다. 파생본은 보관 기간이 지나면 지운다(D12).</li>
  * </ul>
  */
 @Service
@@ -61,17 +62,19 @@ public class GatewayService {
     private final AiClient aiClient;
     private final PreprocessProperties preprocessProps;
 
-    // ponytail: 메모리 저장소라 재시작하면 요청·감사 기록이 사라진다. 7주차 JPA(PostgreSQL)로 옮길 것.
-    private final Map<String, GatewayRequest> requests = new ConcurrentHashMap<>();
-    private final AtomicInteger seq = new AtomicInteger();
+    private final GatewayRequestRepository requests;
+    private final AuditEventRepository audit;
 
     public GatewayService(GatewayProperties props, FilterRegistry filters, TemplateLoader templates,
-                          AiClient aiClient, PreprocessProperties preprocessProps) {
+                          AiClient aiClient, PreprocessProperties preprocessProps,
+                          GatewayRequestRepository requests, AuditEventRepository audit) {
         this.props = props;
         this.filters = filters;
         this.templates = templates;
         this.aiClient = aiClient;
         this.preprocessProps = preprocessProps;
+        this.requests = requests;
+        this.audit = audit;
     }
 
     public List<Role> roles(String user) {
@@ -91,7 +94,8 @@ public class GatewayService {
     }
 
     /** 요청 만들기. 원문은 이 메서드 밖으로 나가지 않는다. */
-    public GatewayRequest create(String user, String log, String purpose, String endpointId) {
+    // ponytail: 서비스 전체를 synchronized 로 잠근다. 요청이 몰리면 요청 단위 잠금(DB 행 잠금)으로 바꿀 것.
+    public synchronized GatewayRequest create(String user, String log, String purpose, String endpointId) {
         require(user, Role.REQUESTER);
         String p = purpose == null || purpose.isBlank() ? ExperimentConstants.PURPOSE_ID : purpose;
         templates.get(p);
@@ -103,37 +107,65 @@ public class GatewayService {
             throw new IllegalArgumentException("로그가 비어 있습니다.");
         }
         List<Map<String, Object>> logs = LogFormat.parse(log);
-        String id = String.format("REQ-%04d", seq.incrementAndGet());
+        String id = nextId();
         FilterResult r = filters.get(ExperimentConstants.ALLOWLIST).apply(logs, id, p);
         int tokens = Preprocessor.estimateTokens(AiClient.buildPrompt(r.output(), ExperimentConstants.FIXED_QUESTION));
         if (tokens > preprocessProps.maxInputTokens()) {
             throw new IllegalArgumentException(String.format("파생본이 너무 큽니다: 약 %,d 토큰 (한도 %,d). 장애 구간을 더 좁혀 주세요.",
                     tokens, preprocessProps.maxInputTokens()));
         }
+        Instant now = Instant.now();
         GatewayRequest req = new GatewayRequest(id, user, p, endpoint, sha256(log), logs.size(), listVersion(p),
                 r.output(), packageSha(r.output()), r.fieldsBefore(), r.fieldsAfter(), r.droppedFields(),
-                warnings(r.output()));
-        req.log(user, "CREATED", String.format("레코드 %d건, 필드 %d → %d, 대상 %s, 목록 %s",
+                warnings(r.output()), now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
+        requests.save(req);
+        log(id, user, "CREATED", String.format("레코드 %d건, 필드 %d → %d, 대상 %s, 목록 %s",
                 logs.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion()));
-        requests.put(id, req);
         return req;
     }
 
     public List<GatewayRequest> list(String user, Status status) {
         roles(user);
-        return requests.values().stream()
-                .filter(r -> status == null || r.getStatus() == status)
-                .sorted(Comparator.comparing(GatewayRequest::getId).reversed())
-                .toList();
+        return status == null ? requests.findAllByOrderByIdDesc() : requests.findByStatusOrderByIdDesc(status);
     }
 
     public GatewayRequest get(String user, String id) {
         roles(user);
-        GatewayRequest r = requests.get(id);
-        if (r == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "요청이 없습니다: " + id);
+        return requests.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "요청이 없습니다: " + id));
+    }
+
+    public List<AuditEvent> audit(String user, String id) {
+        get(user, id);
+        return audit.findByRequestIdOrderByIdAsc(id);
+    }
+
+    /** 보관 기간이 지난 파생본을 지운다. 해시와 감사 기록은 남는다(D12). 매일 새벽 3시. */
+    @Scheduled(cron = "0 0 3 * * *")
+    public void purgeExpired() {
+        purgeExpired(Instant.now());
+    }
+
+    public synchronized int purgeExpired(Instant now) {
+        List<GatewayRequest> expired = requests.findByPayloadExpiresAtBeforeAndPayloadJsonIsNotNull(now);
+        for (GatewayRequest r : expired) {
+            r.purgePayload();
+            requests.save(r);
+            log(r.getId(), "gateway", "PAYLOAD_PURGED", "보관 기간(" + props.payloadRetentionDays() + "일)이 지나 파생본을 지움");
         }
-        return r;
+        return expired.size();
+    }
+
+    private String nextId() {
+        int n = (int) requests.count() + 1;
+        while (requests.existsById(String.format("REQ-%04d", n))) {
+            n++;
+        }
+        return String.format("REQ-%04d", n);
+    }
+
+    private void log(String id, String actor, String type, String detail) {
+        audit.save(new AuditEvent(id, actor, type, detail));
     }
 
     /**
@@ -141,10 +173,10 @@ public class GatewayService {
      *
      * @param seenPackageSha 승인자가 화면에서 본 파생본 해시. 지금 파생본과 다르면 승인하지 않는다.
      */
-    public GatewayRequest decide(String user, String id, boolean approve, String comment, String seenPackageSha) {
+    public synchronized GatewayRequest decide(String user, String id, boolean approve, String comment, String seenPackageSha) {
         require(user, Role.APPROVER);
         GatewayRequest r = get(user, id);
-        synchronized (r) {
+        {
             if (user.equals(r.getRequester())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "자기 요청은 승인하거나 반려할 수 없습니다.");
             }
@@ -156,7 +188,8 @@ public class GatewayService {
                     throw new IllegalArgumentException("반려 사유를 적어 주세요.");
                 }
                 r.reject(user, comment.trim());
-                r.log(user, "REJECTED", comment.trim());
+                requests.save(r);
+                log(id, user, "REJECTED", comment.trim());
                 return r;
             }
             if (!r.getPackageSha256().equals(seenPackageSha)) {
@@ -164,8 +197,10 @@ public class GatewayService {
             }
             String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
             r.approve(user, fp);
-            r.log(user, "APPROVED", "지문 " + fp.substring(0, 12));
+            requests.save(r);
+            log(id, user, "APPROVED", "지문 " + fp.substring(0, 12));
             dispatch(r);
+            requests.save(r);
             return r;
         }
     }
@@ -187,12 +222,12 @@ public class GatewayService {
             return;
         }
         r.sent(a.text(), a.mode(), a.model());
-        r.log("gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자", r.getEndpointId(), a.model(), a.mode(), a.promptChars()));
+        log(r.getId(), "gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자", r.getEndpointId(), a.model(), a.mode(), a.promptChars()));
     }
 
-    private static void fail(GatewayRequest r, String type, String reason) {
+    private void fail(GatewayRequest r, String type, String reason) {
         r.sendFailed(reason);
-        r.log("gateway", type, reason);
+        log(r.getId(), "gateway", type, reason);
     }
 
     private void require(String user, Role role) {

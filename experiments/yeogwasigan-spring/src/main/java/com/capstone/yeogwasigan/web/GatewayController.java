@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.capstone.yeogwasigan.core.log.LogFormat;
+import com.capstone.yeogwasigan.gateway.AuditEvent;
 import com.capstone.yeogwasigan.gateway.GatewayRequest;
 import com.capstone.yeogwasigan.gateway.GatewayService;
 
@@ -81,6 +82,8 @@ public class GatewayController {
         m.put("answerMode", r.getAnswerMode());
         m.put("model", r.getModel());
         m.put("comment", r.getComment());
+        m.put("payloadPurged", r.isPayloadPurged());
+        m.put("payloadExpiresAt", r.getPayloadExpiresAt());
         return m;
     }
 
@@ -91,9 +94,9 @@ public class GatewayController {
     }
 
     @GetMapping("/requests/{id}/audit")
-    public List<GatewayRequest.AuditEvent> audit(@RequestHeader(value = "X-User", required = false) String user,
+    public List<AuditEvent> audit(@RequestHeader(value = "X-User", required = false) String user,
                                                  @PathVariable String id) {
-        return gateway.get(user, id).getAudit();
+        return gateway.audit(user, id);
     }
 
     private static Map<String, Object> summary(GatewayRequest r) {
