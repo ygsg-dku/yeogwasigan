@@ -25,8 +25,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'org.postgresql:postgresql'
+    // 게이트웨이 로그인·역할 (실험 데모 화면은 열어 둔다)
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

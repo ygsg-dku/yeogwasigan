@@ -21,7 +21,7 @@ check() {   # check <설명> <기대: ok|fail> <명령...>
 check "① 내부 서버가 외부 AI 를 직접 부르면 막힌다" fail \
   $DC exec -T internal-client curl -sS -m 8 -o /dev/null -w "%{http_code}" $AI
 check "② 내부 서버에서 게이트웨이로는 닿는다" ok \
-  $DC exec -T internal-client curl -sS -m 8 -f http://gateway:8080/api/gateway/meta
+  $DC exec -T internal-client curl -sS -m 8 -f -o /dev/null -w "%{http_code}" http://gateway:8080/login
 check "③ 게이트웨이는 외부 AI 주소에 닿는다 (401 = 키 없이 접속만 확인)" ok \
   $DC exec -T gateway curl -sS -m 8 -o /dev/null -w "%{http_code}" $AI
 

@@ -1,5 +1,6 @@
 package com.capstone.yeogwasigan.web;
 
+import java.security.Principal;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -21,7 +21,7 @@ import com.capstone.yeogwasigan.gateway.GatewayRequest;
 import com.capstone.yeogwasigan.gateway.GatewayService;
 
 /**
- * 반출 게이트웨이 API (설계안 v0.2의 API 5개). 사용자는 X-User 헤더로 구분한다.
+ * 반출 게이트웨이 API (설계안 v0.2의 API 5개).
  *
  * <pre>
  * POST /api/requests                     { log, purpose?, endpointId? } → 201 파생본 요약
@@ -30,7 +30,9 @@ import com.capstone.yeogwasigan.gateway.GatewayService;
  * POST /api/requests/{id}/decision       { approve, comment?, packageSha256 } → SENT · REJECTED · SEND_FAILED
  * GET  /api/requests/{id}/audit          감사 기록 시간순
  * GET  /api/gateway/meta                 사용자·역할, 등록된 전송 대상
+ * GET  /api/gateway/me                   로그인한 사람과 역할
  * </pre>
+ * 사용자는 로그인한 사람이다({@link SecurityConfig}).
  */
 @RestController
 @RequestMapping("/api")
@@ -50,29 +52,33 @@ public class GatewayController {
     public record DecisionBody(boolean approve, String comment, String packageSha256) {
     }
 
-    // ponytail: X-User 헤더는 누구나 바꿔 보낼 수 있다. 시연용 고정 계정이며 8주차 Spring Security 로그인으로 바꾼다.
     @GetMapping("/gateway/meta")
     public Map<String, Object> meta() {
         return Map.of("users", gateway.users(), "endpoints", gateway.endpoints());
     }
 
+    @GetMapping("/gateway/me")
+    public Map<String, Object> me(Principal principal) {
+        return Map.of("user", principal.getName(), "roles", gateway.roles(principal.getName()));
+    }
+
     @PostMapping("/requests")
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, Object> create(@RequestHeader(value = "X-User", required = false) String user,
+    public Map<String, Object> create(Principal principal,
                                       @RequestBody CreateBody body) {
-        return summary(gateway.create(user, body.log(), body.purpose(), body.endpointId()));
+        return summary(gateway.create(principal.getName(), body.log(), body.purpose(), body.endpointId()));
     }
 
     @GetMapping("/requests")
-    public List<Map<String, Object>> list(@RequestHeader(value = "X-User", required = false) String user,
+    public List<Map<String, Object>> list(Principal principal,
                                           @RequestParam(required = false) GatewayRequest.Status status) {
-        return gateway.list(user, status).stream().map(GatewayController::summary).toList();
+        return gateway.list(principal.getName(), status).stream().map(GatewayController::summary).toList();
     }
 
     @GetMapping("/requests/{id}")
-    public Map<String, Object> detail(@RequestHeader(value = "X-User", required = false) String user,
+    public Map<String, Object> detail(Principal principal,
                                       @PathVariable String id) {
-        GatewayRequest r = gateway.get(user, id);
+        GatewayRequest r = gateway.get(principal.getName(), id);
         Map<String, Object> m = summary(r);
         List<Map<String, Object>> payload = r.getPayload();
         m.put("preview", LogFormat.serialize(payload.subList(0, Math.min(PREVIEW_RECORDS, payload.size()))));
@@ -88,15 +94,15 @@ public class GatewayController {
     }
 
     @PostMapping("/requests/{id}/decision")
-    public Map<String, Object> decide(@RequestHeader(value = "X-User", required = false) String user,
+    public Map<String, Object> decide(Principal principal,
                                       @PathVariable String id, @RequestBody DecisionBody body) {
-        return detail(user, gateway.decide(user, id, body.approve(), body.comment(), body.packageSha256()).getId());
+        return detail(principal, gateway.decide(principal.getName(), id, body.approve(), body.comment(), body.packageSha256()).getId());
     }
 
     @GetMapping("/requests/{id}/audit")
-    public List<AuditEvent> audit(@RequestHeader(value = "X-User", required = false) String user,
+    public List<AuditEvent> audit(Principal principal,
                                                  @PathVariable String id) {
-        return gateway.audit(user, id);
+        return gateway.audit(principal.getName(), id);
     }
 
     private static Map<String, Object> summary(GatewayRequest r) {

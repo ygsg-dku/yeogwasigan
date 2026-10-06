@@ -71,7 +71,7 @@ class GatewayServiceTest {
         GatewayProperties props = new GatewayProperties(Map.of(
                 "ops-kim", List.of(Role.REQUESTER),
                 "sec-park", List.of(Role.APPROVER),
-                "lead-kang", List.of(Role.REQUESTER, Role.APPROVER)), List.of("openai"), 30);
+                "lead-kang", List.of(Role.REQUESTER, Role.APPROVER)), List.of("openai"), 30, null);
         PreprocessProperties pre = new PreprocessProperties(null, null, null, null, null, null, null,
                 0, 0, 0, null, 0, 0, 0);
         return new GatewayService(props, filters, TestSupport.templates(), new AiClient(app), pre, requests, audit);

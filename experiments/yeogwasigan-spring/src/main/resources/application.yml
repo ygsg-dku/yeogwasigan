@@ -32,7 +32,7 @@ yeogwasigan:
   # 사건 범위 토큰(TX_/PS_)의 HMAC 비밀키. 비우면 실행마다 무작위 키. 저장소에 값을 적지 말 것.
   tokenize-secret: ${YG_TOKENIZE_SECRET:}
 
-  # 반출 게이트웨이 (/gateway.html). 사용자는 X-User 헤더로 구분하는 시연용 고정 계정이다.
+  # 반출 게이트웨이 (/gateway.html). 아래 사용자가 로그인 계정이 된다(비밀번호는 demo-password).
   # lead-kang 은 두 역할을 다 가져서 "자기 요청은 승인 못 함"(403)을 시연할 수 있다.
   gateway:
     users:
@@ -40,6 +40,7 @@ yeogwasigan:
       sec-park: [APPROVER]
       lead-kang: [REQUESTER, APPROVER]
     endpoints: ["${YG_AI_PROVIDER:anthropic}"]   # 등록된 전송 대상. 지금은 설정된 AI 제공자 1곳뿐(D6)
+    demo-password: ${YG_DEMO_PASSWORD:}   # 시연 계정 비밀번호. 저장소에 적지 말 것. 비우면 실행마다 무작위(로그에 한 번 출력)
     payload-retention-days: 30   # 파생본 보관 일수. 지나면 파생본만 지우고 해시·감사 기록은 남긴다(D12)
 
   presidio:
