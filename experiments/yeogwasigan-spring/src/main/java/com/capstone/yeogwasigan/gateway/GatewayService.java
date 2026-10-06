@@ -62,6 +62,7 @@ public class GatewayService {
     private final AiClient aiClient;
     private final PreprocessProperties preprocessProps;
 
+    private final Preprocessor preprocessor;
     private final GatewayRequestRepository requests;
     private final AuditEventRepository audit;
 
@@ -73,6 +74,10 @@ public class GatewayService {
         this.templates = templates;
         this.aiClient = aiClient;
         this.preprocessProps = preprocessProps;
+        // 게이트웨이용 전처리: 반복 로그 줄이기와 크기 상한만 쓴다. 실험 장비 제거·정답 문구 삭제·민감값 주입은 실험 전용이라 비운다
+        this.preprocessor = new Preprocessor(new PreprocessProperties(null, null, null, null, null, null, null,
+                preprocessProps.keepFirst(), preprocessProps.keepLast(), preprocessProps.keepSlowest(),
+                null, 0, 0, preprocessProps.maxInputTokens()));
         this.requests = requests;
         this.audit = audit;
     }
@@ -108,7 +113,8 @@ public class GatewayService {
         }
         List<Map<String, Object>> logs = LogFormat.parse(log);
         String id = nextId();
-        FilterResult r = filters.get(ExperimentConstants.ALLOWLIST).apply(logs, id, p);
+        List<Map<String, Object>> reduced = preprocessor.apply(logs).records();
+        FilterResult r = filters.get(ExperimentConstants.ALLOWLIST).apply(reduced, id, p);
         int tokens = Preprocessor.estimateTokens(AiClient.buildPrompt(r.output(), ExperimentConstants.FIXED_QUESTION));
         if (tokens > preprocessProps.maxInputTokens()) {
             throw new IllegalArgumentException(String.format("파생본이 너무 큽니다: 약 %,d 토큰 (한도 %,d). 장애 구간을 더 좁혀 주세요.",
@@ -119,8 +125,8 @@ public class GatewayService {
                 r.output(), packageSha(r.output()), r.fieldsBefore(), r.fieldsAfter(), r.droppedFields(),
                 warnings(r.output()), now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
         requests.save(req);
-        log(id, user, "CREATED", String.format("레코드 %d건, 필드 %d → %d, 대상 %s, 목록 %s",
-                logs.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion()));
+        log(id, user, "CREATED", String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s, 목록 %s",
+                logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion()));
         return req;
     }
 

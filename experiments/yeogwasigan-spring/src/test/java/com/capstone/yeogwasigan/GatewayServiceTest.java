@@ -164,6 +164,15 @@ class GatewayServiceTest {
     }
 
     @Test
+    void 같은_로그가_반복되면_줄여서_보낸다() {
+        String line = LOG.lines().filter(l -> l.contains("\"INFO\"") || l.contains("\"info\"")).findFirst().orElseThrow();
+        String repeated = String.join("\n", java.util.Collections.nCopies(30, line));
+        GatewayRequest r = gateway.create("ops-kim", repeated, null, null);
+        assertEquals(30, r.getInputRecords());
+        assertTrue(r.getPayload().size() < 30, "반복 기록은 처음 몇 건과 마지막 건만 남는다");
+    }
+
+    @Test
     void 등록되지_않은_전송_대상으로는_요청을_만들_수_없다() {
         assertThrows(IllegalArgumentException.class, () -> gateway.create("ops-kim", LOG, null, "https://evil.example"));
     }
