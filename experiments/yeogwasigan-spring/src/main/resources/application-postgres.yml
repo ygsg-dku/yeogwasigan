@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${YG_DB_HOST:postgres}:5432/${YG_DB_NAME:yeogwasigan}
+    username: ${YG_DB_USER:yeogwasigan}
+    password: ${YG_DB_PASSWORD}ㄴ

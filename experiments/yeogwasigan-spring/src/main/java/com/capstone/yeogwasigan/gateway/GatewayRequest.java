@@ -34,7 +34,7 @@ public class GatewayRequest {
     private final int fieldsAfter;
     private final List<String> droppedFields;
     private final List<Warning> warnings;
-    private final Instant createdAt = Instant.now();
+    private Instant createdAt = Instant.now();
     private final List<AuditEvent> audit = new ArrayList<>();
 
     private Status status = Status.PREPARED;
@@ -114,5 +114,20 @@ public class GatewayRequest {
     synchronized void sendFailed(String reason) {
         this.status = Status.SEND_FAILED;
         this.comment = reason;
+    }
+
+    /** DB에서 읽어 되살릴 때만 쓴다. 감사 기록은 새로 만든 빈 목록에 채워 넣는다. */
+    synchronized void restoreState(Instant createdAt, Status status, String approver, String comment,
+                                   String fingerprint, String answer, String answerMode, String model,
+                                   List<AuditEvent> events) {
+        this.createdAt = createdAt;
+        this.status = status;
+        this.approver = approver;
+        this.comment = comment;
+        this.fingerprint = fingerprint;
+        this.answer = answer;
+        this.answerMode = answerMode;
+        this.model = model;
+        this.audit.addAll(events);
     }
 }

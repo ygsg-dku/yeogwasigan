@@ -12,6 +12,14 @@ spring:
     # bootRun / java -jar 로 호스트에서 실행할 때도 프로젝트 루트의 .env(API 키 등)를 읽는다.
     # 컨테이너에는 .env 가 없으므로(.dockerignore) docker-compose 의 environment 값이 쓰인다.
     import: optional:file:.env[.properties]
+  datasource:
+    url: jdbc:h2:file:./data/gateway;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
 
 server:
   port: 8080

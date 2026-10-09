@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.capstone.yeogwasigan.core.ai.AiAnswer;
 import com.capstone.yeogwasigan.core.ai.AiClient;
@@ -60,18 +61,23 @@ public class GatewayService {
     private final TemplateLoader templates;
     private final AiClient aiClient;
     private final PreprocessProperties preprocessProps;
+    private final RequestStore store;
 
-    // ponytail: 메모리 저장소라 재시작하면 요청·감사 기록이 사라진다. 7주차 JPA(PostgreSQL)로 옮길 것.
-    private final Map<String, GatewayRequest> requests = new ConcurrentHashMap<>();
-    private final AtomicInteger seq = new AtomicInteger();
-
+    /** 테스트 등에서 쓰는 기존 생성자: 메모리 저장소. */
     public GatewayService(GatewayProperties props, FilterRegistry filters, TemplateLoader templates,
                           AiClient aiClient, PreprocessProperties preprocessProps) {
+        this(props, filters, templates, aiClient, preprocessProps, new InMemoryRequestStore());
+    }
+
+    @Autowired
+    public GatewayService(GatewayProperties props, FilterRegistry filters, TemplateLoader templates,
+                          AiClient aiClient, PreprocessProperties preprocessProps, RequestStore store) {
         this.props = props;
         this.filters = filters;
         this.templates = templates;
         this.aiClient = aiClient;
         this.preprocessProps = preprocessProps;
+        this.store = store;
     }
 
     public List<Role> roles(String user) {
@@ -103,7 +109,7 @@ public class GatewayService {
             throw new IllegalArgumentException("로그가 비어 있습니다.");
         }
         List<Map<String, Object>> logs = LogFormat.parse(log);
-        String id = String.format("REQ-%04d", seq.incrementAndGet());
+        String id = String.format("REQ-%04d", store.nextSeq());
         FilterResult r = filters.get(ExperimentConstants.ALLOWLIST).apply(logs, id, p);
         int tokens = Preprocessor.estimateTokens(AiClient.buildPrompt(r.output(), ExperimentConstants.FIXED_QUESTION));
         if (tokens > preprocessProps.maxInputTokens()) {
@@ -115,13 +121,13 @@ public class GatewayService {
                 warnings(r.output()));
         req.log(user, "CREATED", String.format("레코드 %d건, 필드 %d → %d, 대상 %s, 목록 %s",
                 logs.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion()));
-        requests.put(id, req);
+        store.save(req);
         return req;
     }
 
     public List<GatewayRequest> list(String user, Status status) {
         roles(user);
-        return requests.values().stream()
+        return store.findAll().stream()
                 .filter(r -> status == null || r.getStatus() == status)
                 .sorted(Comparator.comparing(GatewayRequest::getId).reversed())
                 .toList();
@@ -129,7 +135,7 @@ public class GatewayService {
 
     public GatewayRequest get(String user, String id) {
         roles(user);
-        GatewayRequest r = requests.get(id);
+        GatewayRequest r = store.find(id).orElse(null);
         if (r == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "요청이 없습니다: " + id);
         }
@@ -157,6 +163,7 @@ public class GatewayService {
                 }
                 r.reject(user, comment.trim());
                 r.log(user, "REJECTED", comment.trim());
+                store.save(r);        // 추가
                 return r;
             }
             if (!r.getPackageSha256().equals(seenPackageSha)) {
@@ -165,7 +172,9 @@ public class GatewayService {
             String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
             r.approve(user, fp);
             r.log(user, "APPROVED", "지문 " + fp.substring(0, 12));
+            store.save(r);        // 추가: 전송 전에 먼저 저장
             dispatch(r);
+            store.save(r);        // 추가: 전송 결과 저장
             return r;
         }
     }

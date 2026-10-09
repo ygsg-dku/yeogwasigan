@@ -22,6 +22,11 @@ dependencies {
     // 결과 CSV 읽기/쓰기 (AI 응답에 줄바꿈·쉼표·따옴표가 섞여도 안전하게)
     implementation 'org.apache.commons:commons-csv:1.12.0'
 
+    // DB 저장 (7주차): JPA + 개발용 H2 파일 + 운영용 PostgreSQL
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.h2database:h2'
+    runtimeOnly 'org.postgresql:postgresql'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
