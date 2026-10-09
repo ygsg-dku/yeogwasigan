@@ -162,7 +162,7 @@ public class AiClient {
         }
         body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
         String raw = http.post()
-                .uri("https://api.openai.com/v1/chat/completions")
+                .uri(props.openaiBaseUrl() + "/v1/chat/completions")
                 .header("Authorization", "Bearer " + apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(LogFormat.toJson(body))
