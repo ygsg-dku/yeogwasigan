@@ -42,6 +42,11 @@ yeogwasigan:
     endpoints: ["${YG_AI_PROVIDER:anthropic}"]   # 등록된 전송 대상. 지금은 설정된 AI 제공자 1곳뿐(D6)
     demo-password: ${YG_DEMO_PASSWORD:}   # 시연 계정 비밀번호. 저장소에 적지 말 것. 비우면 실행마다 무작위(로그에 한 번 출력)
     payload-retention-days: 30   # 파생본 보관 일수. 지나면 파생본만 지우고 해시·감사 기록은 남긴다(D12)
+    # 승인 정책 (docs/spec/14_APPROVAL_AND_WARNING.md)
+    #   ALWAYS      : 모든 요청에 다른 사람의 승인이 필요하다 (기본값, 설계안 D5)
+    #   CONDITIONAL : 높음 경고가 있을 때만 승인이 필요하다. 없으면 요청자가 확인하고 승인 없이 보낸다
+    # 어느 모드든 높음 경고가 있는 요청을 승인하려면 승인자가 "오탐 확인"과 사유를 남겨야 한다
+    approval-mode: ${YG_APPROVAL_MODE:ALWAYS}
 
   presidio:
     # 호스트에서 bootRun 할 때는 docker-compose 가 열어 둔 5002/5001 포트로,
