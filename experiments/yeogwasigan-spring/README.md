@@ -101,7 +101,7 @@ export YG_AI_MODEL=gpt-5.1-2025-11-13   # reasoning_effort=none 으로 고정 �
 |---|---|---|
 | `YG_AI_PROVIDER` | `anthropic` | `anthropic` 또는 `openai` |
 | `YG_AI_MODEL` | `claude-sonnet-4-5` / `gpt-5.1-2025-11-13` | 모델명. 계정에서 쓸 수 있는 이름인지 먼저 확인 |
-| `YG_AI_MAX_TOKENS` | `1024` | 응답 최대 길이 |
+| `YG_AI_MAX_TOKENS` | `4096` | 응답 최대 길이(토큰). 넘으면 답 끝에 "끊겼습니다" 표시 |
 | `YG_AI_MOCK` | `false` | `true` 면 키가 있어도 mock 모드 |
 | `PRESIDIO_ANALYZER_URL` | `http://localhost:5002` | compose 로 앱을 띄우면 자동으로 `http://presidio-analyzer:3000` |
 | `PRESIDIO_ANONYMIZER_URL` | `http://localhost:5001` | 〃 `http://presidio-anonymizer:3000` |

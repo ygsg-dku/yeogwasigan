@@ -47,6 +47,7 @@
   .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
   pre { margin: 0; background: var(--g1); padding: 10px; font-family: var(--mono); font-size: 11.5px; max-height: 320px;
         overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre.answer { max-height: none; font-size: 12.5px; }   /* AI 답은 잘리지 않게 전부 보인다 */
   mark { background: var(--ink); color: var(--paper); }
   mark.low { background: transparent; color: inherit; outline: 1.5px dashed var(--ink); }   /* 낮음 경고 = 점선 */
   .gate { border: 2px solid var(--ink); padding: 8px 10px; font-size: 13.5px; font-weight: 700; }
@@ -207,7 +208,7 @@ async function open(id) {
       <span class="muted">${why}</span>
     </div>
     ${d.comment ? `<div class="muted">사유: ${esc(d.comment)}</div>` : ""}
-    ${d.answer ? `<div><div class="muted">AI 답 (${esc(d.model)} · ${esc(d.answerMode)})</div><pre>${esc(d.answer)}</pre></div>` : ""}
+    ${d.answer ? `<div><div class="muted">AI 답 (${esc(d.model)} · ${esc(d.answerMode)})</div><pre class="answer">${esc(d.answer)}</pre></div>` : ""}
     <div><div class="muted">감사 기록 (추가만 가능)</div><ul class="audit">${audit.map((a) => `
       <li><span>${new Date(a.at).toLocaleTimeString("ko-KR")}</span><b>${esc(a.type)}</b><span>${esc(a.actor)} · ${esc(a.detail)}</span></li>`).join("")}</ul></div>`;
   $("approveBtn").onclick = () => decide(true, d.packageSha256);

@@ -64,7 +64,8 @@ yeogwasigan:
   ai:
     provider: ${YG_AI_PROVIDER:anthropic}      # anthropic | openai
     model: ${YG_AI_MODEL:}                      # 비우면 제공자별 기본 모델 (AiClient 참고). 실험 기간 동안 고정할 것
-    max-tokens: ${YG_AI_MAX_TOKENS:1024}
+    # 응답 최대 길이(토큰). 1024 였을 때 답이 결론 전에 끊겼다(9/25 리허설 11/12). 끊기면 답 끝에 표시가 붙는다
+    max-tokens: ${YG_AI_MAX_TOKENS:4096}
     timeout: 120s
     mock: ${YG_AI_MOCK:false}                   # true 면 API 키가 있어도 mock 모드
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
