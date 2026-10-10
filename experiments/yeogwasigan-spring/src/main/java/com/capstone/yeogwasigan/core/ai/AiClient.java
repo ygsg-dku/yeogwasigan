@@ -141,13 +141,14 @@ public class AiClient {
                 .body(LogFormat.toJson(body))
                 .retrieve()
                 .body(String.class);
+        JsonNode root = readTree(raw);
         StringBuilder sb = new StringBuilder();
-        for (JsonNode block : readTree(raw).path("content")) {
+        for (JsonNode block : root.path("content")) {
             if ("text".equals(block.path("type").asText())) {
                 sb.append(block.path("text").asText());
             }
         }
-        return sb.toString();
+        return markTruncated(sb.toString(), "max_tokens".equals(root.path("stop_reason").asText()));
     }
 
     private String callOpenAi(String prompt) {
@@ -168,7 +169,16 @@ public class AiClient {
                 .body(LogFormat.toJson(body))
                 .retrieve()
                 .body(String.class);
-        return readTree(raw).path("choices").path(0).path("message").path("content").asText();
+        JsonNode choice = readTree(raw).path("choices").path(0);
+        return markTruncated(choice.path("message").path("content").asText(), "length".equals(choice.path("finish_reason").asText()));
+    }
+
+    /**
+     * 응답이 max-tokens 에 걸려 끊겼으면 끝에 표시를 붙인다. 끊긴 답은 결론이 빠질 수 있어 채점할 때 알아야 한다.
+     * (9/25 리허설 답 12개 중 11개가 1024 토큰에서 문장 중간에 끊겨 있었다)
+     */
+    String markTruncated(String text, boolean truncated) {
+        return truncated ? text + "\n\n[응답이 길이 상한(max-tokens " + props.maxTokens() + ")에 걸려 여기서 끊겼습니다]" : text;
     }
 
     private static JsonNode readTree(String raw) {

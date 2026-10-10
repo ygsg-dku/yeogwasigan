@@ -57,7 +57,7 @@ public record AppProperties(
 
         public Ai {
             provider = blankTo(provider, "anthropic").toLowerCase();
-            maxTokens = maxTokens > 0 ? maxTokens : 1024;
+            maxTokens = maxTokens > 0 ? maxTokens : 4096;
             timeout = timeout != null ? timeout : Duration.ofSeconds(120);
         }
     }

@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,6 +23,7 @@ import com.capstone.yeogwasigan.core.filter.FilterRegistry;
 import com.capstone.yeogwasigan.core.filter.FilterResult;
 import com.capstone.yeogwasigan.core.log.LogFormat;
 import com.capstone.yeogwasigan.core.template.TemplateLoader;
+import com.capstone.yeogwasigan.gateway.GatewayProperties.ApprovalMode;
 import com.capstone.yeogwasigan.gateway.GatewayProperties.Role;
 import com.capstone.yeogwasigan.gateway.GatewayRequest.Status;
 import com.capstone.yeogwasigan.gateway.GatewayRequest.Warning;
@@ -37,6 +36,8 @@ import com.capstone.yeogwasigan.preprocess.Preprocessor;
  * <ul>
  *   <li>원문은 메모리에서 화이트리스트(담기)만 거치고 버린다. 남는 것은 입력 해시·레코드 수와 파생본(D8).</li>
  *   <li>요청자와 승인자는 달라야 한다(D5).</li>
+ *   <li>참고 경고는 {@link WarningRules} 기준(높음·낮음). 높음 경고가 있는 요청을 승인하려면 승인자가 "오탐 확인"과 사유를 남겨야 한다.
+ *       조건부 승인 모드에서는 높음 경고가 없는 요청을 요청자가 승인 없이 보낼 수 있다(docs/spec/14_APPROVAL_AND_WARNING.md).</li>
  *   <li>승인 지문 = SHA-256(파생본 해시 | 목록 버전 | 전송 대상). 전송 직전에 다시 계산해 다르면 보내지 않는다.</li>
  *   <li>등록된 전송 대상만 쓸 수 있다(D6). 전송 실패는 끝 상태이고 다시 보내려면 새 요청(D11).</li>
  *   <li>요청과 감사 기록은 DB 에 남는다. 파생본은 보관 기간이 지나면 지운다(D12).</li>
@@ -44,17 +45,6 @@ import com.capstone.yeogwasigan.preprocess.Preprocessor;
  */
 @Service
 public class GatewayService {
-
-    /** 참고 경고: 파생본을 바꾸지 않고 승인자에게 위치만 알려 준다. 화면도 같은 정규식으로 강조한다. */
-    static final Map<String, Pattern> WARNING_PATTERNS = new LinkedHashMap<>();
-
-    static {
-        WARNING_PATTERNS.put("EMAIL", Pattern.compile("[\\w.+-]+@[\\w-]+\\.[\\w.-]+"));
-        WARNING_PATTERNS.put("UUID", Pattern.compile("\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b"));
-        // 13~16자리 숫자 또는 4자리씩 끊은 형태. 19자리 timeUnixNano 는 잡지 않는다.
-        WARNING_PATTERNS.put("CARD", Pattern.compile("\\b(?:\\d{4}[ -]){3}\\d{1,4}\\b|\\b\\d{13,16}\\b"));
-        WARNING_PATTERNS.put("IPV4", Pattern.compile("\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b"));
-    }
 
     private final GatewayProperties props;
     private final FilterRegistry filters;
@@ -121,12 +111,16 @@ public class GatewayService {
                     tokens, preprocessProps.maxInputTokens()));
         }
         Instant now = Instant.now();
+        List<Warning> warnings = warnings(r.output());
+        int high = warnings.stream().filter(w -> w.level() == WarningRules.Level.HIGH).mapToInt(Warning::count).sum();
+        boolean approvalRequired = props.approvalMode() == ApprovalMode.ALWAYS || high > 0;
         GatewayRequest req = new GatewayRequest(id, user, p, endpoint, sha256(log), logs.size(), listVersion(p),
                 r.output(), packageSha(r.output()), r.fieldsBefore(), r.fieldsAfter(), r.droppedFields(),
-                warnings(r.output()), now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
+                warnings, approvalRequired, now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
         requests.save(req);
-        log(id, user, "CREATED", String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s, 목록 %s",
-                logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion()));
+        log(id, user, "CREATED", String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s, 목록 %s, 높음 경고 %d건 → %s",
+                logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion(), high,
+                approvalRequired ? "승인 필요" : "승인 없이 전송 가능(조건부)"));
         return req;
     }
 
@@ -174,12 +168,18 @@ public class GatewayService {
         audit.save(new AuditEvent(id, actor, type, detail));
     }
 
+    public GatewayRequest decide(String user, String id, boolean approve, String comment, String seenPackageSha) {
+        return decide(user, id, approve, comment, seenPackageSha, false);
+    }
+
     /**
      * 승인 또는 반려. 승인이면 바로 전송한다(D7).
      *
      * @param seenPackageSha 승인자가 화면에서 본 파생본 해시. 지금 파생본과 다르면 승인하지 않는다.
+     * @param falsePositive  높음 경고가 모두 오탐이라고 승인자가 확인했는지. 높음 경고가 있으면 이 확인과 사유가 있어야 승인된다
      */
-    public synchronized GatewayRequest decide(String user, String id, boolean approve, String comment, String seenPackageSha) {
+    public synchronized GatewayRequest decide(String user, String id, boolean approve, String comment, String seenPackageSha,
+                                              boolean falsePositive) {
         require(user, Role.APPROVER);
         GatewayRequest r = get(user, id);
         {
@@ -195,20 +195,74 @@ public class GatewayService {
                 }
                 r.reject(user, comment.trim());
                 requests.save(r);
-                log(id, user, "REJECTED", comment.trim());
+                log(id, user, "REJECTED", comment.trim() + " · 대기 " + waited(r));
                 return r;
             }
             if (!r.getPackageSha256().equals(seenPackageSha)) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "화면에서 본 파생본과 지금 파생본이 다릅니다. 다시 열어 확인해 주세요.");
             }
+            int high = r.highWarnings();
+            String note = null;
+            if (high > 0) {
+                if (!falsePositive || comment == null || comment.isBlank()) {
+                    throw new IllegalArgumentException("높음 경고가 " + high + "건 있습니다. 진짜 민감값이면 반려하고, "
+                            + "모두 오탐이면 '오탐 확인'에 표시하고 사유를 적어 승인하세요.");
+                }
+                note = "높음 경고 " + high + "건 오탐 확인: " + comment.trim();
+            }
             String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
-            r.approve(user, fp);
+            r.approve(user, fp, note);
             requests.save(r);
-            log(id, user, "APPROVED", "지문 " + fp.substring(0, 12));
+            log(id, user, "APPROVED", "지문 " + fp.substring(0, 12) + (note != null ? " · " + note : "") + " · 대기 " + waited(r));
             dispatch(r);
             requests.save(r);
             return r;
         }
+    }
+
+    /**
+     * 조건부 승인: 높음 경고가 없는 요청을 요청자가 승인 없이 보낸다. 만들 때 승인 필요로 판정된 요청은 보낼 수 없고,
+     * 보내기 직전에 파생본을 다시 검사해 높음 경고가 나오면 보내지 않는다(고장 나면 보내지 않는다).
+     */
+    public synchronized GatewayRequest sendWithoutApproval(String user, String id, String seenPackageSha) {
+        require(user, Role.REQUESTER);
+        GatewayRequest r = get(user, id);
+        if (!user.equals(r.getRequester())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "승인 없이 보내기는 요청한 사람만 할 수 있습니다.");
+        }
+        if (r.getStatus() != Status.PREPARED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "승인 대기 상태가 아닙니다: " + r.getStatus());
+        }
+        if (r.isApprovalRequired()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "승인이 필요한 요청입니다. 승인자의 승인을 받아야 보낼 수 있습니다.");
+        }
+        if (!r.getPackageSha256().equals(seenPackageSha)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "화면에서 본 파생본과 지금 파생본이 다릅니다. 다시 열어 확인해 주세요.");
+        }
+        int highNow = warnings(r.getPayload()).stream()
+                .filter(w -> w.level() == WarningRules.Level.HIGH).mapToInt(Warning::count).sum();
+        if (highNow > 0) {
+            fail(r, "WARNING_RECHECK_FAILED", "보내기 직전 검사에서 높음 경고 " + highNow + "건이 나와 보내지 않았습니다.");
+            requests.save(r);
+            return r;
+        }
+        String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
+        r.skipApproval(fp, "승인 생략: 높음 경고 없음(조건부 승인)");
+        requests.save(r);
+        log(id, user, "APPROVAL_SKIPPED", "높음 경고 없음 · 조건부 승인 · 지문 " + fp.substring(0, 12));
+        dispatch(r);
+        requests.save(r);
+        return r;
+    }
+
+    public ApprovalMode approvalMode() {
+        return props.approvalMode();
+    }
+
+    /** 요청을 만든 뒤 결정까지 걸린 시간. 승인이 장애 대응을 얼마나 늦추는지 감사 기록으로 남긴다 */
+    private static String waited(GatewayRequest r) {
+        long s = Duration.between(r.getCreatedAt(), Instant.now()).toSeconds();
+        return s >= 60 ? (s / 60) + "분 " + (s % 60) + "초" : s + "초";
     }
 
     /** 전송 직전 재확인: 파생본·목록 버전·전송 대상 중 하나라도 바뀌었으면 보내지 않는다. */
@@ -255,16 +309,17 @@ public class GatewayService {
         return sha256(packageSha + "|" + listVersion + "|" + endpointId);
     }
 
+    /** 경고 종류별 건수(규칙 순서). 위치까지 필요하면 {@link WarningRules#scan}. */
     static List<Warning> warnings(List<Map<String, Object>> payload) {
-        String text = LogFormat.serialize(payload);
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        WarningRules.RULES.forEach(rule -> counts.put(rule.type(), 0));
+        for (WarningRules.Finding f : WarningRules.scan(payload)) {
+            counts.merge(f.type(), 1, Integer::sum);
+        }
         List<Warning> out = new ArrayList<>();
-        WARNING_PATTERNS.forEach((type, p) -> {
-            int n = 0;
-            for (Matcher m = p.matcher(text); m.find(); ) {
-                n++;
-            }
+        counts.forEach((type, n) -> {
             if (n > 0) {
-                out.add(new Warning(type, n));
+                out.add(new Warning(type, n, WarningRules.levelOf(type)));
             }
         });
         return out;
