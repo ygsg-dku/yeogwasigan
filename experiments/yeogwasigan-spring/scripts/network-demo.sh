@@ -2,7 +2,7 @@
 # 네트워크 분리 시연: docker compose -f docker-compose.gateway.yml up -d --build 뒤에 실행한다.
 #   열려 있어야 하는 길 (게이트웨이 경유)
 #     ② 내부 서버 → 게이트웨이              : 성공해야 한다
-#     ③ 게이트웨이 → 외부 AI 주소 연결      : 성공해야 한다 (키 없이 접속만 확인, 401 이 정상)
+#     ③ 게이트웨이 → 외부 AI                 : 성공해야 한다 (키가 있으면 200, 없으면 401 = 접속만 확인)
 #   막혀 있어야 하는 우회로 (내부 서버에서 직접)
 #     ① 외부 AI 를 이름으로 직접 호출
 #     ④ 외부 IP 로 직접 (DNS 를 건너뜀)
@@ -43,8 +43,9 @@ blocked() { # blocked <설명> <curl 인자...> : 연결 자체가 안 되어야
 echo "── 열려 있어야 하는 길"
 check "② 내부 서버에서 게이트웨이로는 닿는다" ok \
   $DC exec -T internal-client curl -sS -m 8 -f -o /dev/null -w "%{http_code}" http://gateway:8080/login
-check "③ 게이트웨이는 외부 AI 주소에 닿는다 (401 = 키 없이 접속만 확인)" ok \
-  $DC exec -T gateway curl -sS -m 8 -o /dev/null -w "%{http_code}" $AI
+# 키는 게이트웨이 컨테이너 안의 환경변수로만 쓰고 화면에는 응답 코드만 찍는다 (작은따옴표: 컨테이너 안에서 펼친다)
+check "③ 게이트웨이는 외부 AI 에 닿는다 (키가 있으면 200 = 인증까지, 없으면 401 = 접속만 확인)" ok \
+  $DC exec -T gateway sh -c 'set -- -sS -m 8 -o /dev/null -w "%{http_code}"; [ -n "$OPENAI_API_KEY" ] && set -- "$@" -H "Authorization: Bearer $OPENAI_API_KEY"; curl "$@" https://api.openai.com/v1/models'
 
 echo "── 막혀 있어야 하는 우회로 (내부 서버에서 직접)"
 blocked "① 외부 AI 를 이름으로 직접 호출" $AI
