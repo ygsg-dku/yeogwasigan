@@ -22,6 +22,7 @@ services:
       YG_AI_MODEL: ${YG_AI_MODEL:-}
       YG_AI_MOCK: ${YG_AI_MOCK:-true}    # 기본은 mock. 실제 호출은 YG_AI_MOCK=false 로 띄울 때만
       YG_TOKENIZE_SECRET: ${YG_TOKENIZE_SECRET:-}
+      YG_DEMO_PASSWORD: ${YG_DEMO_PASSWORD:-}   # 시연 계정 비밀번호. 비우면 실행마다 무작위(컨테이너 로그에 출력)
     volumes:
       - ./scenarios:/app/scenarios:ro
     networks: [internal, external]
