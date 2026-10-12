@@ -113,9 +113,14 @@ class PackageGoldenTest {
             Files.writeString(GOLDEN.resolve("manifest.json"), manifest);
         }
 
-        assertEquals(Files.readString(GOLDEN.resolve(ANALYSIS + ".package.jsonl")), analysisJson, ANALYSIS + " 패키지");
-        assertEquals(Files.readString(GOLDEN.resolve(REPORT + ".package.jsonl")), reportJson, REPORT + " 패키지");
-        assertEquals(Files.readString(GOLDEN.resolve("manifest.json")), manifest, "manifest(해시·건수)");
+        assertEquals(read(ANALYSIS + ".package.jsonl"), analysisJson, ANALYSIS + " 패키지");
+        assertEquals(read(REPORT + ".package.jsonl"), reportJson, REPORT + " 패키지");
+        assertEquals(read("manifest.json"), manifest, "manifest(해시·건수)");
+    }
+
+    /** git 설정(autocrlf)에 따라 golden 파일이 CRLF 로 체크아웃될 수 있어 줄바꿈을 맞춰 읽는다. */
+    private static String read(String name) throws IOException {
+        return Files.readString(GOLDEN.resolve(name)).replace("\r\n", "\n");
     }
 
     private static String manifest(GatewayRequest analysis, GatewayRequest report) {
