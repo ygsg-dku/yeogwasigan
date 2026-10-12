@@ -3,6 +3,7 @@ package com.capstone.yeogwasigan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * 여과시간 — 망분리 환경의 장애 로그를 외부 AI로 보낼 때의 민감정보 여과 방식 비교 실험.
@@ -18,6 +19,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableScheduling   // 게이트웨이 파생본 보관 기간 정리
 public class YeogwasiganApplication {
 
     public static void main(String[] args) {

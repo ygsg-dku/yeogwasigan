@@ -1,0 +1,8 @@
+# 게이트웨이 저장소를 PostgreSQL 로 쓴다.
+#   ./gradlew bootRun --args='--spring.profiles.active=postgres'
+# 접속 정보는 환경변수로만 넣는다. 저장소에 값을 적지 말 것.
+spring:
+  datasource:
+    url: ${YG_DB_URL:jdbc:postgresql://localhost:5432/yeogwasigan}
+    username: ${YG_DB_USER:yeogwasigan}
+    password: ${YG_DB_PASSWORD:}

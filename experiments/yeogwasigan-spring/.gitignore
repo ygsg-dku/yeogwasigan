@@ -8,3 +8,5 @@ out/
 .env
 results/*
 !results/.gitkeep
+# 게이트웨이 H2 파일 DB
+data/
