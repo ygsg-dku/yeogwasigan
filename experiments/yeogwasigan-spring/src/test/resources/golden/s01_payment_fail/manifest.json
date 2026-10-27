@@ -1,0 +1,7 @@
+{
+  "scenario": "s01_payment_fail",
+  "inputSha256": "c79c85ef39faf8bd84acb79eb1f9ca2a9ba83e1bcad29b88a49bfb568140f652",
+  "tokenizeKey": "TEST_SECRET=golden-test-secret",
+  "INCIDENT_ANALYSIS": {"records":11,"fieldsBefore":49,"fieldsAfter":10,"listVersion":"e298ad200eb1","packageSha256":"a6e6cf05a50378951aa6e4d9f80bd5b03994d6d6d637f58d3c27796f06f24468"},
+  "INCIDENT_REPORT_DRAFT": {"records":11,"fieldsBefore":49,"fieldsAfter":5,"listVersion":"de700995b6e5","packageSha256":"dec2fa4c1ae4e3ca832d464fe64c8e2738364ab5c1def91cc4e30b2e6193f07d"}
+}

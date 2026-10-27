@@ -104,7 +104,8 @@ public class GatewayService {
         List<Map<String, Object>> logs = LogFormat.parse(log);
         String id = nextId();
         List<Map<String, Object>> reduced = preprocessor.apply(logs).records();
-        FilterResult r = filters.get(ExperimentConstants.ALLOWLIST).apply(reduced, id, p);
+        // 사건 ID 는 요청 번호가 아니라 입력 원문 해시에서 만든다. 같은 로그를 다시 올리면 같은 토큰, 같은 파생본 해시가 나온다.
+        FilterResult r = filters.get(ExperimentConstants.ALLOWLIST).apply(reduced, caseId(log), p);
         int tokens = Preprocessor.estimateTokens(AiClient.buildPrompt(r.output(), ExperimentConstants.FIXED_QUESTION));
         if (tokens > preprocessProps.maxInputTokens()) {
             throw new IllegalArgumentException(String.format("파생본이 너무 큽니다: 약 %,d 토큰 (한도 %,d). 장애 구간을 더 좁혀 주세요.",
@@ -299,6 +300,15 @@ public class GatewayService {
     /** 목록 버전 = 활성 템플릿 내용의 해시. 목록이 바뀌면 버전도 바뀐다. */
     String listVersion(String purpose) {
         return sha256(LogFormat.toJson(templates.describe(purpose))).substring(0, 12);
+    }
+
+    /**
+     * 사건 ID = "CASE-" + 입력 원문 SHA-256 앞 12자리.
+     * 토큰은 HMAC(서버 비밀키, 사건 ID + 값)이므로, 사건 ID 가 요청마다 바뀌면 같은 로그의 파생본도 매번 달라진다.
+     * 사건 ID 는 비밀이 아니다(토큰 되짚기 방지는 서버 비밀키가 맡는다).
+     */
+    static String caseId(String log) {
+        return "CASE-" + sha256(log).substring(0, 12);
     }
 
     static String packageSha(List<Map<String, Object>> payload) {
