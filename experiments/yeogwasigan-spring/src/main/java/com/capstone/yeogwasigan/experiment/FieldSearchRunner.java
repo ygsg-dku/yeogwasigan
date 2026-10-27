@@ -59,6 +59,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * 5) 최종 목록과 손으로 고른 목록을 검증 장애(validate, 고를 때 안 쓴 장애)에서 비교한다
  * resume-from=이전 summary.json 이면 1~3 을 건너뛰고 4 부터 한다
  *
+ * 주의: 탐색 중에는 후보 칸을 실제로 AI 에 보내 보므로, 그 자체가 반출이다.
+ * 그래서 탐색은 민감값을 가짜 값으로 바꾼 데이터(또는 테스트 환경 로그)로만 한다 (10/27 결정).
+ * 지금 실험 데이터(OTel 데모 + 주입한 가짜 민감값)는 이미 이 조건을 만족한다.
+ *
  * 채점은 AI 판정(정답 원인 설명과 답을 비교, 0 틀림 / 1 서비스만 / 2 서비스+원인)이다. 사람 블라인드 채점으로 일부를 확인한다.
  * 결과: results/fieldsearch_시각/ steps.csv · summary.json · selected_template.yaml
  */
