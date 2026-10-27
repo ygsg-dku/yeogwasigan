@@ -115,6 +115,23 @@ public class AiClient {
         }
     }
 
+    /** 로그 없이 문장 하나만 묻는다 (필드 탐색의 채점용). mock 이면 "0" 을 돌려준다. */
+    public AiAnswer complete(String prompt) {
+        if ("mock".equals(mode())) {
+            return answer("0", "mock", prompt);
+        }
+        try {
+            String text = switch (props.provider()) {
+                case "anthropic" -> callAnthropic(prompt);
+                case "openai" -> callOpenAi(prompt);
+                default -> throw new IllegalArgumentException("지원하지 않는 YG_AI_PROVIDER: " + props.provider());
+            };
+            return answer(text, "live", prompt);
+        } catch (RuntimeException e) {
+            return answer("[AI 호출 오류] " + e.getClass().getSimpleName() + ": " + e.getMessage(), "error", prompt);
+        }
+    }
+
     private AiAnswer answer(String text, String mode, String prompt) {
         return new AiAnswer(text, mode, props.provider(), model, ExperimentConstants.TEMPERATURE, prompt.length());
     }
@@ -162,7 +179,7 @@ public class AiClient {
         }
         body.put("messages", List.of(Map.of("role", "user", "content", prompt)));
         String raw = http.post()
-                .uri("https://api.openai.com/v1/chat/completions")
+                .uri(props.openaiBaseUrl() + "/v1/chat/completions")
                 .header("Authorization", "Bearer " + apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(LogFormat.toJson(body))

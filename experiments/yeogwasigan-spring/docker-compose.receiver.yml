@@ -1,0 +1,22 @@
+# 수신 기록기 시연: 외부 AI 자리에 receiver 를 두고 '승인한 사본 = 실제로 나간 사본'을 양쪽 기록으로 확인한다.
+#
+#   docker compose -f docker-compose.gateway.yml -f docker-compose.receiver.yml up -d --build
+#   ./scripts/receiver-demo.sh
+#
+# 게이트웨이는 OpenAI 대신 receiver(외부망)로 보낸다. 진짜 API 키는 쓰지 않는다(아래 가짜 키가 receiver 로만 간다).
+# receiver 는 external 망에만 있어서 내부 서버는 receiver 에도 직접 못 간다.
+services:
+  gateway:
+    environment:
+      YG_AI_PROVIDER: openai
+      YG_AI_MOCK: "false"
+      OPENAI_API_KEY: receiver-demo-not-a-real-key
+      YG_OPENAI_BASE_URL: http://receiver:8000
+
+  receiver:
+    image: python:3.12-alpine
+    command: ["python", "-u", "/app/receiver.py"]
+    volumes:
+      - ./scripts/receiver.py:/app/receiver.py:ro
+      - ./data/receiver:/data
+    networks: [external]

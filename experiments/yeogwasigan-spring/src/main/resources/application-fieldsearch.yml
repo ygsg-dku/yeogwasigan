@@ -1,0 +1,19 @@
+# 필드 탐색 (AI 확인 단계) 프로파일: FieldSearchRunner 만 실행하고 종료한다.
+#   python3 scripts/field_select.py --json data/fieldsearch_candidates.json
+#   ./gradlew bootRun --args='--spring.profiles.active=fieldsearch'                       # .env 의 키로 live
+#   YG_AI_MOCK=true ./gradlew bootRun --args='--spring.profiles.active=fieldsearch'       # 비용 없이 파이프라인만 확인
+spring:
+  main:
+    web-application-type: none
+
+yeogwasigan:
+  fieldsearch:
+    candidates-file: data/fieldsearch_candidates.json
+    max-candidates: 15
+    # 1차에서 원인 단서가 한 번도 없던 칸은 AI 로 확인하지 않는다 (비용 1/3, 10/27 결정)
+    min-clue: 1
+    # 고르는 장애와 검증 장애는 겹치지 않는다 (고를 때 안 쓴 장애로 검증)
+    select: S1_paymentFailure,S2_paymentUnreachable,S3_productCatalogLockContention,S4_kafkaQueueProblems,S5_intlShippingSlowdown,S6_productCatalogFailure
+    validate: E2a_adFailure,E2b_cartFailure
+    # 판정용 정답 원인 설명. S1~S6 은 scoring/scenarios.json 의 description, E2 는 장애 스위치 설명
+    truths: "{S1: '결제(payment) 서비스 결제 실패', S2: '결제(payment) 서버 연결 끊김', S3: '상품(product-catalog) DB 잠김, 에러 없이 느려지기만 함', S4: '카프카(kafka) 메시지 밀림, 소비 지연', S5: '배송(shipping) 서비스의 해외 배송만 10초 느려짐', S6: '상품(product-catalog) 서비스의 특정 상품 하나만 조회 실패', E2a: '광고(ad) 서비스 요청 실패', E2b: '장바구니(cart) 서비스 실패'}"
