@@ -1,0 +1,11 @@
+{"resource":{"service.name":"flagd","service.version":"v0.11.1"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}
+{"resource":{"service.name":"shipping","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"WARN"}}
+{"resource":{"service.name":"frontend","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}
+{"resource":{"service.name":"checkout","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}
+{"resource":{"service.name":"currency","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}
+{"resource":{"service.name":"payment","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}
+{"resource":{"service.name":"payment","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}
+{"resource":{"service.name":"payment","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"ERROR"}}
+{"resource":{"service.name":"checkout","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"ERROR"}}
+{"resource":{"service.name":"frontend","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"ERROR","attributes":{"http.response.status_code":500}}}
+{"resource":{"service.name":"cart","service.version":"2.0.2"},"scope":{},"logRecord":{"timeUnixNano":"2025-09-15T05:10:00Z/PT5M","severityText":"INFO"}}

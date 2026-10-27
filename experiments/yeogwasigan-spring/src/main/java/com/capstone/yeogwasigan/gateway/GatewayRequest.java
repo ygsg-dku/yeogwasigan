@@ -21,6 +21,7 @@ import jakarta.persistence.Transient;
  * 반출 요청 하나. 원문 로그는 들고 있지 않고 해시와 레코드 수만 남긴다(D8).
  *
  * <p>상태: PREPARED(승인 대기) → APPROVED → SENT, 또는 REJECTED / SEND_FAILED 로 끝난다(D11).
+ * 조건부 승인 모드에서 높음 경고가 없는 요청은 요청자가 승인 없이 보낼 수 있다(approvalRequired=false, 14번 문서).
  * 파생본(payload)은 보관 기간이 지나면 지워지고 해시와 감사 기록만 남는다(D12).
  */
 @Entity
@@ -29,7 +30,12 @@ public class GatewayRequest {
 
     public enum Status { PREPARED, APPROVED, SENT, REJECTED, SEND_FAILED }
 
-    public record Warning(String type, int count) {
+    /** 경고 종류별 건수. level 이 없는 예전 기록은 종류로 등급을 정한다. */
+    public record Warning(String type, int count, WarningRules.Level level) {
+
+        public Warning {
+            level = level != null ? level : WarningRules.levelOf(type);
+        }
     }
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -63,6 +69,8 @@ public class GatewayRequest {
     @Column(columnDefinition = "TEXT")
     private String comment;
     private String fingerprint;
+    /** 만들 때의 승인 정책 결과. null(예전 기록)은 승인 필요로 본다 */
+    private Boolean approvalRequired;
     @Lob
     @Column(columnDefinition = "TEXT")
     private String answer;
@@ -78,7 +86,7 @@ public class GatewayRequest {
     GatewayRequest(String id, String requester, String purpose, String endpointId, String inputSha256,
                    int inputRecords, String listVersion, List<Map<String, Object>> payload, String packageSha256,
                    int fieldsBefore, int fieldsAfter, List<String> droppedFields, List<Warning> warnings,
-                   Instant createdAt, Instant payloadExpiresAt) {
+                   boolean approvalRequired, Instant createdAt, Instant payloadExpiresAt) {
         this.id = id;
         this.requester = requester;
         this.purpose = purpose;
@@ -92,6 +100,7 @@ public class GatewayRequest {
         this.fieldsAfter = fieldsAfter;
         this.droppedFieldsJson = LogFormat.toJson(droppedFields);
         this.warningsJson = LogFormat.toJson(warnings);
+        this.approvalRequired = approvalRequired;
         this.createdAt = createdAt;
         this.payloadExpiresAt = payloadExpiresAt;
     }
@@ -112,6 +121,7 @@ public class GatewayRequest {
     public String getApprover() { return approver; }
     public String getComment() { return comment; }
     public String getFingerprint() { return fingerprint; }
+    public boolean isApprovalRequired() { return approvalRequired == null || approvalRequired; }
     public String getAnswer() { return answer; }
     public String getAnswerMode() { return answerMode; }
     public String getModel() { return model; }
@@ -130,10 +140,23 @@ public class GatewayRequest {
 
     public List<Warning> getWarnings() { return read(warningsJson, new TypeReference<>() { }); }
 
-    void approve(String approver, String fingerprint) {
+    public int highWarnings() {
+        return getWarnings().stream().filter(w -> w.level() == WarningRules.Level.HIGH).mapToInt(Warning::count).sum();
+    }
+
+    /** @param note 승인 메모. 높음 경고를 오탐으로 확인했으면 그 사유 */
+    void approve(String approver, String fingerprint, String note) {
         this.status = Status.APPROVED;
         this.approver = approver;
         this.fingerprint = fingerprint;
+        this.comment = note;
+    }
+
+    /** 조건부 승인: 높음 경고가 없어 승인 없이 보낸다. 승인자는 비워 둔다 */
+    void skipApproval(String fingerprint, String note) {
+        this.status = Status.APPROVED;
+        this.fingerprint = fingerprint;
+        this.comment = note;
     }
 
     void reject(String approver, String comment) {

@@ -1,24 +1,34 @@
 {
-  "_설명": "게이트웨이 참고 경고(GatewayService.WARNING_PATTERNS) 시험 자료. 칸 하나짜리 기록의 값을 넣으면 expect 만큼 경고가 떠야 한다. expect 가 {} 이면 경고가 없어야 한다. note 가 있는 항목은 현재 기준의 한계를 기록한 것이다(준수 경고 기준 작업에서 판단).",
+  "_설명": "게이트웨이 참고 경고(WarningRules, 기준 v0.1 — docs/spec/14_APPROVAL_AND_WARNING.md) 시험 자료. 칸 하나짜리 기록의 값을 넣으면 expect 만큼 경고가 떠야 한다. expect 가 {} 이면 경고가 없어야 한다. note 는 기준이 바뀐 이유나 남은 한계를 적은 것이다. 경고 기준을 바꾸면 expect 도 같이 고친다.",
   "cases": [
     { "name": "에러 메시지 속 이메일", "field": "exception.message", "value": "payment failed for user kim@bank.com", "expect": { "EMAIL": 1 } },
     { "name": "대시로 끊은 카드번호", "field": "exception.message", "value": "card 4111-1111-1111-1111 declined", "expect": { "CARD": 1 } },
     { "name": "공백으로 끊은 카드번호", "field": "body", "value": "charge 4111 1111 1111 1111 failed", "expect": { "CARD": 1 } },
     { "name": "붙여 쓴 16자리 카드번호", "field": "body", "value": "cardNumber=4111111111111111", "expect": { "CARD": 1 } },
-    { "name": "세션 UUID", "field": "body", "value": "session 3f2a9c1e-4b7d-4e2a-9c1e-8f3a2b1c0d9e expired", "expect": { "UUID": 1 } },
-    { "name": "내부 IPv4", "field": "exception.message", "value": "connect to 10.0.3.21:50051 refused", "expect": { "IPV4": 1 } },
-    { "name": "이메일과 IP 함께", "field": "body", "value": "user lee@corp.kr from 172.18.0.5", "expect": { "EMAIL": 1, "IPV4": 1 } },
+    { "name": "세션 UUID (이름 없이)", "field": "body", "value": "session 3f2a9c1e-4b7d-4e2a-9c1e-8f3a2b1c0d9e expired", "expect": { "UUID": 1 }, "note": "ID 이름(sessionId 등)이 바로 앞에 없어 낮음" },
     { "name": "같은 종류 두 번", "field": "body", "value": "a@x.com and b@y.org", "expect": { "EMAIL": 2 } },
+
+    { "name": "휴대폰 번호", "field": "body", "value": "contact 010-1234-5678", "expect": { "PHONE": 1 }, "note": "v0.1 추가 (예전 기준의 미탐)" },
+    { "name": "계좌번호", "field": "body", "value": "account 110-123-456789", "expect": { "ACCOUNT": 1 }, "note": "v0.1 추가 (예전 기준의 미탐)" },
+    { "name": "주민등록번호", "field": "body", "value": "customer 900101-1234567 verified", "expect": { "RRN": 1 }, "note": "v0.1 추가" },
+    { "name": "식별자 이름 뒤의 UUID", "field": "body", "value": "GET /api/recommendations?sessionId=3f2a9c1e-4b7d-4e2a-9c1e-8f3a2b1c0d9e", "expect": { "ID": 1 }, "note": "v0.1 추가. 같은 자리를 UUID 로 다시 세지 않는다" },
+    { "name": "user.id= 뒤의 값", "field": "body", "value": "loyalty=gold user.id=8c3765c2-b72d-11f1-85f9-0242ac120017", "expect": { "ID": 1 } },
+    { "name": "JSON 안의 userId", "field": "body", "value": "{\"userId\":\"u-58213-kr\",\"amount\":129000}", "expect": { "ID": 1 } },
+    { "name": "공인 IP", "field": "exception.message", "value": "upstream 8.8.4.4 timed out", "expect": { "IPV4": 1 } },
 
     { "name": "19자리 timeUnixNano 는 카드가 아니다", "field": "timeUnixNano", "value": "1727654400123456789", "expect": {} },
     { "name": "traceId(32자리 16진수)", "field": "traceId", "value": "4bf92f3577b34da6a3ce929d0e0e4736", "expect": {} },
     { "name": "12자리 주문번호", "field": "body", "value": "order 202610071234 shipped", "expect": {} },
     { "name": "응답 시간과 상태 코드", "field": "body", "value": "GET /api/cart 500 took 1234ms", "expect": {} },
     { "name": "세 자리 버전 문자열", "field": "service.version", "value": "1.27.0", "expect": {} },
-
-    { "name": "13자리 밀리초 타임스탬프", "field": "body", "value": "ts=1727654400123", "expect": { "CARD": 1 }, "note": "오탐. 13자리 숫자를 카드로 잡는다" },
-    { "name": "네 자리 버전 문자열", "field": "service.version", "value": "2.4.1.0", "expect": { "IPV4": 1 }, "note": "오탐. 점 네 개짜리 버전을 IP로 잡는다" },
-    { "name": "휴대폰 번호", "field": "body", "value": "contact 010-1234-5678", "expect": {}, "note": "미탐. 전화번호 경고 없음" },
-    { "name": "계좌번호", "field": "body", "value": "account 110-123-456789", "expect": {}, "note": "미탐. 계좌번호 경고 없음" }
+    { "name": "13자리 밀리초 타임스탬프", "field": "body", "value": "ts=1727654400123", "expect": {}, "note": "v0.1 해결 (예전 기준의 오탐). 카드 번호대(2~6으로 시작) + Luhn 검사" },
+    { "name": "네 자리 버전 문자열", "field": "service.version", "value": "2.4.1.0", "expect": {}, "note": "v0.1 해결 (예전 기준의 오탐). version 칸은 검사하지 않고, 끝자리 0 주소는 제외" },
+    { "name": "본문 속 브라우저 버전", "field": "body", "value": "HeadlessChrome/149.0.0.0 Safari/537.36", "expect": {}, "note": "v0.1 해결. '/' 뒤 숫자는 IP 로 보지 않는다 (S6 에서 25건 오탐이었음)" },
+    { "name": "내부(사설) IPv4", "field": "exception.message", "value": "connect to 10.0.3.21:50051 refused", "expect": {}, "note": "v0.1 기준 변경. 사설 IP 는 경고에서 제외 (S1~S6 경고 소음의 70%). 기관이 내부 주소를 반출 금지로 보면 목록·가림으로 다룬다" },
+    { "name": "이메일과 사설 IP 함께", "field": "body", "value": "user lee@corp.kr from 172.18.0.5", "expect": { "EMAIL": 1 }, "note": "v0.1 기준 변경. 사설 IP 제외" },
+    { "name": "날짜는 계좌가 아니다", "field": "body", "value": "[2026-09-23T09:07:38.112Z] GET /cart", "expect": {} },
+    { "name": "Luhn 검사를 통과하지 못한 16자리", "field": "body", "value": "ref 4111111111111112", "expect": {} },
+    { "name": "토큰화된 식별자", "field": "body", "value": "userId=TX_9166A5F1 failed", "expect": {}, "note": "이미 사건 범위 토큰이라 가명이다" },
+    { "name": "비어 있는 자리표시자", "field": "body", "value": "GetCartAsync called with userId={userId}", "expect": {} }
   ]
 }

@@ -47,7 +47,14 @@
   .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
   pre { margin: 0; background: var(--g1); padding: 10px; font-family: var(--mono); font-size: 11.5px; max-height: 320px;
         overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+  pre.answer { max-height: none; font-size: 12.5px; }   /* AI 답은 잘리지 않게 전부 보인다 */
   mark { background: var(--ink); color: var(--paper); }
+  mark.low { background: transparent; color: inherit; outline: 1.5px dashed var(--ink); }   /* 낮음 경고 = 점선 */
+  .gate { border: 2px solid var(--ink); padding: 8px 10px; font-size: 13.5px; font-weight: 700; }
+  .gate.free { border-style: dashed; font-weight: 500; }
+  .findings td { font-size: 12.5px; vertical-align: top; }
+  .findings td.ctx { font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere; }
+  .chk { display: inline-flex; gap: 6px; align-items: center; font-size: 13.5px; }
   .audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
   .audit li { display: grid; grid-template-columns: 70px 120px minmax(0, 1fr); gap: 8px; border-left: 3px solid var(--ink); padding-left: 8px; }
   .audit b { font-family: var(--mono); font-size: 12px; }
@@ -60,7 +67,7 @@
   <header>
     <div>
       <h1>여과시간 게이트웨이</h1>
-      <div class="sub">장애 로그 → 목록 10칸만 담은 파생본 → 다른 사람의 승인 → 등록된 AI 한 곳으로만</div>
+      <div class="sub">장애 로그 → 목록 칸만 담은 파생본 → 참고 경고 확인·승인 → 등록된 AI 한 곳으로만</div>
     </div>
     <div class="who">
       <span>로그인: <b id="who">…</b></span>
@@ -97,7 +104,7 @@
           </select>
         </div>
         <table>
-          <thead><tr><th>요청</th><th>상태</th><th>요청자</th><th>필드</th><th>경고</th></tr></thead>
+          <thead><tr><th>요청</th><th>상태</th><th>요청자</th><th>필드</th><th>경고 (높음·낮음)</th></tr></thead>
           <tbody id="list"><tr><td colspan="5" class="muted">아직 요청이 없습니다. 위에서 로그를 올려 파생본을 만드세요.</td></tr></tbody>
         </table>
       </section>
@@ -113,9 +120,8 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const STATUS = { PREPARED: "승인 대기", APPROVED: "승인됨", SENT: "전송 완료", REJECTED: "반려", SEND_FAILED: "전송 실패" };
-// 서버(GatewayService.WARNING_PATTERNS)와 같은 패턴. 파생본을 바꾸지 않고 강조만 한다.
-const WARN = [/[\w.+-]+@[\w-]+\.[\w.-]+/g, /\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b/g,
-              /\b(?:\d{4}[ -]){3}\d{1,4}\b|\b\d{13,16}\b/g, /\b(?:\d{1,3}\.){3}\d{1,3}\b/g];
+// 경고 기준은 서버(WarningRules, docs/spec/14_APPROVAL_AND_WARNING.md)에만 있다. 화면은 서버가 준 위치만 강조한다.
+const TYPE = { ID: "식별자", EMAIL: "이메일", RRN: "주민번호", CARD: "카드번호", PHONE: "휴대폰", ACCOUNT: "계좌번호", UUID: "UUID", IPV4: "공인 IP" };
 let me = { user: "", roles: [] };
 let current = null;
 
@@ -134,18 +140,22 @@ async function api(path, opts = {}) {
 }
 function showErr(e) { $("err").hidden = !e; $("err").textContent = e ? e.message : ""; }
 
-function highlight(text) {
+// 미리보기 강조: 높음은 검게, 낮음은 점선. 긴 값부터 바꿔야 짧은 값이 긴 값 안을 먼저 칠하지 않는다
+function highlight(text, marks) {
   let html = esc(text);
-  for (const re of WARN) html = html.replace(re, (m) => `<mark>${m}</mark>`);
+  for (const m of [...marks].sort((a, b) => b.value.length - a.value.length)) {
+    html = html.split(esc(m.value)).join(`<mark class="${m.level === "LOW" ? "low" : ""}">${esc(m.value)}</mark>`);
+  }
   return html;
 }
+const warnText = (ws, level) => ws.filter((w) => w.level === level).map((w) => `${TYPE[w.type] || w.type} ${w.count}`).join(" · ");
 
 async function loadList() {
   const rows = await api("/api/requests" + ($("filter").value ? "?status=" + $("filter").value : ""));
   $("list").innerHTML = rows.length ? rows.map((r) => `
     <tr tabindex="0" data-id="${r.id}" class="${current === r.id ? "sel" : ""}">
       <td>${r.id}</td><td><span class="st ${r.status}">${STATUS[r.status]}</span></td><td>${esc(r.requester)}</td>
-      <td>${r.fieldsBefore} → ${r.fieldsAfter}</td><td>${r.warnings.reduce((a, w) => a + w.count, 0)}</td></tr>`).join("")
+      <td>${r.fieldsBefore} → ${r.fieldsAfter}</td><td>${r.highWarnings} · ${r.warnings.reduce((a, w) => a + w.count, 0) - r.highWarnings}</td></tr>`).join("")
     : `<tr><td colspan="5" class="muted">해당하는 요청이 없습니다.</td></tr>`;
   for (const tr of $("list").querySelectorAll("tr[data-id]")) {
     tr.onclick = () => open(tr.dataset.id);
@@ -158,9 +168,21 @@ async function open(id) {
   showErr(null);
   const [d, audit] = await Promise.all([api("/api/requests/" + id), api(`/api/requests/${id}/audit`)]);
   const canDecide = d.status === "PREPARED" && roles().includes("APPROVER") && d.requester !== user();
+  const canSend = d.status === "PREPARED" && !d.approvalRequired && d.requester === user();
   const why = d.status !== "PREPARED" ? "이미 결정된 요청입니다." : !roles().includes("APPROVER") ? "승인자 권한이 없습니다."
             : d.requester === user() ? "자기 요청은 승인할 수 없습니다. 다른 승인자 계정으로 로그인해 보세요." : "";
-  const warn = d.warnings.length ? d.warnings.map((w) => `${w.type} ${w.count}`).join(" · ") : "없음";
+  const high = warnText(d.warnings, "HIGH"), low = warnText(d.warnings, "LOW");
+  const warn = `높음 ${d.highWarnings}${high ? ` (${high})` : ""} · 낮음 ${low || "0"}`;
+  const gate = d.status !== "PREPARED" ? ""
+    : d.approvalRequired
+      ? `<div class="gate">승인 필요 · ${d.highWarnings ? `높음 경고 ${d.highWarnings}건: 진짜 민감값이면 반려, 모두 오탐이면 오탐 확인과 사유를 남기고 승인`
+                                                        : "항상 승인 모드: 다른 사람의 승인을 받아야 나갑니다"}</div>`
+      : `<div class="gate free">승인 없이 전송 가능 · 높음 경고가 없습니다 (조건부 승인). 요청자가 내용을 확인하고 보냅니다</div>`;
+  const findings = d.highFindings.length ? `
+    <div><div class="muted">높음 경고 ${d.highWarnings}건 · 파생본 ${d.records}건 전체 검사 · 값은 가려서 표시</div>
+      <table class="findings"><thead><tr><th>기록</th><th>칸</th><th>종류</th><th>앞뒤 문맥</th></tr></thead><tbody>
+      ${d.highFindings.map((f) => `<tr><td>#${f.record}</td><td>${esc(f.field.replace(/^logRecord\.(attributes\.)?/, ""))}</td>
+        <td>${TYPE[f.type] || f.type}</td><td class="ctx">${esc(f.context)}</td></tr>`).join("")}</tbody></table></div>` : "";
   $("detail").innerHTML = `
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${d.id}</h2><span class="st ${d.status}">${STATUS[d.status]}</span></div>
     <dl class="kv">
@@ -172,20 +194,32 @@ async function open(id) {
       <dt>승인 지문</dt><dd>${d.fingerprint ? d.fingerprint.slice(0, 16) + "…" : "—"}</dd>
       <dt>참고 경고</dt><dd>${warn}</dd>
     </dl>
-    <div><div class="muted">실제로 나갈 내용 (앞 ${d.previewRecords}건 / 전체 ${d.records}건, 검게 칠한 곳은 참고 경고)</div><pre>${highlight(d.preview)}</pre></div>
+    ${gate}
+    ${findings}
+    <div><div class="muted">실제로 나갈 내용 (앞 ${d.previewRecords}건 / 전체 ${d.records}건 · 검게 칠한 곳 = 높음 경고, 점선 = 낮음 경고)</div><pre>${highlight(d.preview, d.previewMarks)}</pre></div>
     <details><summary>버려진 필드 ${d.droppedFields.length}개</summary><pre>${esc(d.droppedFields.join("\n"))}</pre></details>
+    ${canSend ? `<div class="row"><button class="primary" id="sendBtn">승인 없이 전송</button>
+      <span class="muted">높음 경고가 없어 조건부 승인으로 보낼 수 있습니다. 보내기 직전에 한 번 더 검사합니다.</span></div>` : ""}
     <div class="row">
-      <button class="primary" id="approveBtn" ${canDecide ? "" : "disabled"}>승인하고 전송</button>
-      <input type="text" id="reason" placeholder="반려 사유" aria-label="반려 사유" ${canDecide ? "" : "disabled"}>
+      ${d.highWarnings && canDecide ? `<label class="chk"><input type="checkbox" id="falsePositive"> 높음 경고는 모두 오탐입니다</label>` : ""}
+      <input type="text" id="reason" placeholder="${d.highWarnings ? "사유 (반려·오탐 확인 모두 필수)" : "반려 사유"}" aria-label="사유" ${canDecide ? "" : "disabled"}>
+      <button class="primary" id="approveBtn" ${canDecide && !d.highWarnings ? "" : "disabled"}>승인하고 전송</button>
       <button id="rejectBtn" ${canDecide ? "" : "disabled"}>반려</button>
       <span class="muted">${why}</span>
     </div>
     ${d.comment ? `<div class="muted">사유: ${esc(d.comment)}</div>` : ""}
-    ${d.answer ? `<div><div class="muted">AI 답 (${esc(d.model)} · ${esc(d.answerMode)})</div><pre>${esc(d.answer)}</pre></div>` : ""}
+    ${d.answer ? `<div><div class="muted">AI 답 (${esc(d.model)} · ${esc(d.answerMode)})</div><pre class="answer">${esc(d.answer)}</pre></div>` : ""}
     <div><div class="muted">감사 기록 (추가만 가능)</div><ul class="audit">${audit.map((a) => `
       <li><span>${new Date(a.at).toLocaleTimeString("ko-KR")}</span><b>${esc(a.type)}</b><span>${esc(a.actor)} · ${esc(a.detail)}</span></li>`).join("")}</ul></div>`;
   $("approveBtn").onclick = () => decide(true, d.packageSha256);
   $("rejectBtn").onclick = () => decide(false, d.packageSha256);
+  // 높음 경고가 있으면 오탐 확인 + 사유가 있어야 승인 버튼이 켜진다 (서버도 같은 규칙으로 막는다)
+  const gateApprove = () => {
+    if (!canDecide || !d.highWarnings) return;
+    $("approveBtn").disabled = !($("falsePositive").checked && $("reason").value.trim());
+  };
+  if ($("falsePositive")) { $("falsePositive").onchange = gateApprove; $("reason").oninput = gateApprove; }
+  if ($("sendBtn")) $("sendBtn").onclick = () => send(d.packageSha256);
   loadList();
 }
 
@@ -194,7 +228,17 @@ async function decide(approve, sha) {
     $("approveBtn").disabled = $("rejectBtn").disabled = true;
     $("approveBtn").textContent = approve ? "전송 중…" : $("approveBtn").textContent;
     await api(`/api/requests/${current}/decision`, { method: "POST",
-      body: JSON.stringify({ approve, comment: $("reason").value, packageSha256: sha }) });
+      body: JSON.stringify({ approve, comment: $("reason").value, packageSha256: sha,
+                             falsePositive: !!($("falsePositive") && $("falsePositive").checked) }) });
+    await open(current);
+  } catch (e) { showErr(e); await open(current).catch(() => {}); showErr(e); }
+}
+
+async function send(sha) {
+  try {
+    $("sendBtn").disabled = true;
+    $("sendBtn").textContent = "전송 중…";
+    await api(`/api/requests/${current}/send`, { method: "POST", body: JSON.stringify({ packageSha256: sha }) });
     await open(current);
   } catch (e) { showErr(e); await open(current).catch(() => {}); showErr(e); }
 }
