@@ -283,7 +283,10 @@ public class GatewayService {
             return;
         }
         r.sent(a.text(), a.mode(), a.model());
-        log(r.getId(), "gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자", r.getEndpointId(), a.model(), a.mode(), a.promptChars()));
+        // 받는 쪽 기록(receiver)과 맞춰 볼 수 있게 실제로 보낸 프롬프트의 해시를 남긴다
+        String sentSha = sha256(AiClient.buildPrompt(r.getPayload(), ExperimentConstants.FIXED_QUESTION));
+        log(r.getId(), "gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자, 보낸 내용 sha256=%s",
+                r.getEndpointId(), a.model(), a.mode(), a.promptChars(), sentSha));
     }
 
     private void fail(GatewayRequest r, String type, String reason) {

@@ -70,6 +70,8 @@ yeogwasigan:
     mock: ${YG_AI_MOCK:false}                   # true 면 API 키가 있어도 mock 모드
     anthropic-api-key: ${ANTHROPIC_API_KEY:}
     openai-api-key: ${OPENAI_API_KEY:}
+    # OpenAI 주소. 수신 기록기 시연(docker-compose.receiver.yml)에서만 http://receiver:8000 으로 바꾼다
+    openai-base-url: ${YG_OPENAI_BASE_URL:https://api.openai.com}
     # temperature 는 설정으로 바꿀 수 없다. 코드에서 0 으로 고정 (ExperimentConstants.TEMPERATURE)
 
   experiment:

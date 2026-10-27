@@ -69,7 +69,7 @@ class GatewayServiceTest {
 
     private GatewayService newService(GatewayProperties.ApprovalMode mode) {
         AppProperties app = new AppProperties(null, null, null,
-                new AppProperties.Ai("openai", null, 0, null, true, null, null), null, null);
+                new AppProperties.Ai("openai", null, 0, null, true, null, null, null), null, null);
         FilterRegistry filters = new FilterRegistry(List.of(TestSupport.passthrough(),
                 new DenylistFilter(new PresidioClient(app), app), TestSupport.allowlistBodyImportantOnly()));
         GatewayProperties props = new GatewayProperties(Map.of(
@@ -109,6 +109,18 @@ class GatewayServiceTest {
         assertEquals(Status.SENT, saved.getStatus());
         assertEquals("mock", saved.getAnswerMode());
         assertEquals(List.of("CREATED", "APPROVED", "SENT"), auditTypes(r));
+    }
+
+    @Test
+    void 전송_기록에_실제로_보낸_프롬프트_해시가_남는다() throws Exception {
+        GatewayRequest r = gateway.create("ops-kim", LOG, null, null);
+        gateway.decide("sec-park", r.getId(), true, "샘플의 예시 값", r.getPackageSha256(), true);
+        String prompt = AiClient.buildPrompt(r.getPayload(), com.capstone.yeogwasigan.core.config.ExperimentConstants.FIXED_QUESTION);
+        String expected = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                .digest(prompt.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        String sent = gateway.audit("sec-park", r.getId()).stream()
+                .filter(e -> "SENT".equals(e.getType())).findFirst().orElseThrow().getDetail();
+        assertTrue(sent.endsWith("sha256=" + expected), sent);
     }
 
     @Test

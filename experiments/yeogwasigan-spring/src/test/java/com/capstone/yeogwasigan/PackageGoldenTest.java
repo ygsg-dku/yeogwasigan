@@ -60,7 +60,7 @@ class PackageGoldenTest {
     void setUp() throws IOException {
         log = Files.readString(Path.of("scenarios", TestSupport.SAMPLE, "raw.jsonl"));
         AppProperties app = new AppProperties(null, null, null,
-                new AppProperties.Ai("openai", null, 0, null, true, null, null), null, null);
+                new AppProperties.Ai("openai", null, 0, null, true, null, null, null), null, null);
         TemplateLoader templates = templates();
         AllowlistFilter allowlist = new AllowlistFilter(templates, new CaseScopedTokenizer(TEST_SECRET), new PresidioClient(app));
         FilterRegistry filters = new FilterRegistry(List.of(TestSupport.passthrough(),

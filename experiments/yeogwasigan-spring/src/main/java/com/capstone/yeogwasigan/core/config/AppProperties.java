@@ -23,7 +23,7 @@ public record AppProperties(
         scenariosDir = blankTo(scenariosDir, "scenarios");
         resultsDir = blankTo(resultsDir, "results");
         presidio = presidio != null ? presidio : new Presidio(null, null, null, null, null);
-        ai = ai != null ? ai : new Ai(null, null, 0, null, false, null, null);
+        ai = ai != null ? ai : new Ai(null, null, 0, null, false, null, null, null);
         experiment = experiment != null ? experiment : new Experiment(0, null, null, null);
         blind = blind != null ? blind : new Blind(null, null, null, true);
     }
@@ -53,10 +53,12 @@ public record AppProperties(
             Duration timeout,
             boolean mock,
             String anthropicApiKey,
-            String openaiApiKey) {
+            String openaiApiKey,
+            String openaiBaseUrl) {
 
         public Ai {
             provider = blankTo(provider, "anthropic").toLowerCase();
+            openaiBaseUrl = blankTo(openaiBaseUrl, "https://api.openai.com");
             maxTokens = maxTokens > 0 ? maxTokens : 4096;
             timeout = timeout != null ? timeout : Duration.ofSeconds(120);
         }

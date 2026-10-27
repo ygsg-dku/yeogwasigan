@@ -12,7 +12,7 @@ class AiClientTest {
 
     private static AiClient client(int maxTokens) {
         return new AiClient(new AppProperties(null, null, null,
-                new AppProperties.Ai("openai", null, maxTokens, null, true, null, null), null, null));
+                new AppProperties.Ai("openai", null, maxTokens, null, true, null, null, null), null, null));
     }
 
     @Test
