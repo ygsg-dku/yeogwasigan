@@ -40,6 +40,9 @@ yeogwasigan:
       sec-park: [APPROVER]
       lead-kang: [REQUESTER, APPROVER]
     endpoints: ["${YG_AI_PROVIDER:anthropic}"]   # 등록된 전송 대상. 지금은 설정된 AI 제공자 1곳뿐(D6)
+    # 전송 대상 등급 (docs/spec/16_POLICY_EVALUATOR.md). T2 = 조직 내부 AI, T1 = 승인된 외부 AI.
+    # 적지 않은 등록 대상은 T1, endpoints 에 없는 대상은 T0(항상 거부). 예: tiers: { internal-llm: T2 }
+    tiers: {}
     demo-password: ${YG_DEMO_PASSWORD:}   # 시연 계정 비밀번호. 저장소에 적지 말 것. 비우면 실행마다 무작위(로그에 한 번 출력)
     payload-retention-days: 30   # 파생본 보관 일수. 지나면 파생본만 지우고 해시·감사 기록은 남긴다(D12)
     # 승인 정책 (docs/spec/14_APPROVAL_AND_WARNING.md)

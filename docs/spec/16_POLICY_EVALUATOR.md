@@ -100,6 +100,6 @@
 
 ## 5. 아직 하지 않은 것
 
-- **게이트웨이 연결**: 지금 `GatewayService` 는 등록 대상을 문자열 목록(`yeogwasigan.gateway.endpoints`)으로만 본다. 대상마다 등급을 붙이는 설정과 `create()` 에서 이 평가기를 부르는 일은 다음 단계다. 대운의 policy fixture(T0 대상 거부)가 나오면 같은 입력으로 맞춘다.
+- ~~게이트웨이 연결~~ → 연결함. 등급 설정은 `yeogwasigan.gateway.tiers`, 요청을 만들 때 평가한다. 경로별 설명과 실제 요청 예시는 17번 문서.
 - **T1 ceiling**: 명세의 "T1 은 host·과도한 stack frame 을 더 줄일 수 있다"는 패키지 내용을 바꾸는 일이라 Package Builder 쪽에서 한다. 이 평가기는 상태만 정한다.
 - **팀 확인 필요**: T2 에서 높음 경고가 있어도 바로 실행(P-02)하는 것이 맞는지. 명세상 T2 는 PRIVATE_READY 이지만, 준수의 승인 기준(14번 문서)은 등급 구분 없이 쓰여 있다.

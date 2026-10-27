@@ -148,6 +148,8 @@ public class GatewayController {
         m.put("warnings", r.getWarnings());
         m.put("highWarnings", r.highWarnings());
         m.put("approvalRequired", r.isApprovalRequired());
+        m.put("tier", r.getTier());
+        m.put("policyReason", r.getPolicyReason());
         return m;
     }
 

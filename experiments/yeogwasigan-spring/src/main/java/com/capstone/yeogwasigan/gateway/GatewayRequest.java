@@ -21,6 +21,7 @@ import jakarta.persistence.Transient;
  * 반출 요청 하나. 원문 로그는 들고 있지 않고 해시와 레코드 수만 남긴다(D8).
  *
  * <p>상태: PREPARED(승인 대기) → APPROVED → SENT, 또는 REJECTED / SEND_FAILED 로 끝난다(D11).
+ * 정책 평가에서 거부되면 만들 때 바로 DENIED 로 끝나고 파생본은 남기지 않는다(docs/spec/16_POLICY_EVALUATOR.md).
  * 조건부 승인 모드에서 높음 경고가 없는 요청은 요청자가 승인 없이 보낼 수 있다(approvalRequired=false, 14번 문서).
  * 파생본(payload)은 보관 기간이 지나면 지워지고 해시와 감사 기록만 남는다(D12).
  */
@@ -28,7 +29,7 @@ import jakarta.persistence.Transient;
 @Table(name = "gateway_request")
 public class GatewayRequest {
 
-    public enum Status { PREPARED, APPROVED, SENT, REJECTED, SEND_FAILED }
+    public enum Status { PREPARED, APPROVED, SENT, REJECTED, SEND_FAILED, DENIED }
 
     /** 경고 종류별 건수. level 이 없는 예전 기록은 종류로 등급을 정한다. */
     public record Warning(String type, int count, WarningRules.Level level) {
@@ -45,6 +46,10 @@ public class GatewayRequest {
     private String requester;
     private String purpose;
     private String endpointId;
+    /** 만들 때 등록부에서 읽은 전송 대상 등급(T2/T1/T0). null 은 정책 평가기 이전 기록 */
+    private String tier;
+    /** 정책 평가 결과를 만든 규칙(사유 코드) */
+    private String policyReason;
     private String inputSha256;
     private int inputRecords;
     private String listVersion;
@@ -86,7 +91,7 @@ public class GatewayRequest {
     GatewayRequest(String id, String requester, String purpose, String endpointId, String inputSha256,
                    int inputRecords, String listVersion, List<Map<String, Object>> payload, String packageSha256,
                    int fieldsBefore, int fieldsAfter, List<String> droppedFields, List<Warning> warnings,
-                   boolean approvalRequired, Instant createdAt, Instant payloadExpiresAt) {
+                   boolean approvalRequired, String tier, String policyReason, Instant createdAt, Instant payloadExpiresAt) {
         this.id = id;
         this.requester = requester;
         this.purpose = purpose;
@@ -101,6 +106,8 @@ public class GatewayRequest {
         this.droppedFieldsJson = LogFormat.toJson(droppedFields);
         this.warningsJson = LogFormat.toJson(warnings);
         this.approvalRequired = approvalRequired;
+        this.tier = tier;
+        this.policyReason = policyReason;
         this.createdAt = createdAt;
         this.payloadExpiresAt = payloadExpiresAt;
     }
@@ -109,6 +116,8 @@ public class GatewayRequest {
     public String getRequester() { return requester; }
     public String getPurpose() { return purpose; }
     public String getEndpointId() { return endpointId; }
+    public String getTier() { return tier; }
+    public String getPolicyReason() { return policyReason; }
     public String getInputSha256() { return inputSha256; }
     public int getInputRecords() { return inputRecords; }
     public String getListVersion() { return listVersion; }
@@ -170,6 +179,14 @@ public class GatewayRequest {
         this.answer = answer;
         this.answerMode = mode;
         this.model = model;
+    }
+
+    /** 정책 평가에서 거부. 파생본(비밀값이 남았을 수 있다)은 지우고 해시만 남긴다 */
+    void deny(String reason) {
+        this.status = Status.DENIED;
+        this.approvalRequired = false;
+        this.comment = reason;
+        purgePayload();
     }
 
     void sendFailed(String reason) {

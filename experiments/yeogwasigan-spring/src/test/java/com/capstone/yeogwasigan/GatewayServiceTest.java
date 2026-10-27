@@ -178,8 +178,13 @@ class GatewayServiceTest {
     }
 
     @Test
-    void 등록되지_않은_전송_대상으로는_요청을_만들_수_없다() {
-        assertThrows(IllegalArgumentException.class, () -> gateway.create("ops-kim", LOG, null, "https://evil.example"));
+    void 등록되지_않은_전송_대상은_T0_로_거부되고_사유가_남는다() {
+        GatewayRequest r = gateway.create("ops-kim", LOG, null, "https://evil.example");
+        assertEquals(Status.DENIED, r.getStatus());
+        assertEquals("T0", r.getTier());
+        assertEquals("T0_DESTINATION", r.getPolicyReason());
+        assertTrue(r.isPayloadPurged(), "거부된 요청은 파생본을 남기지 않는다");
+        assertEquals(List.of("DENIED"), auditTypes(r));
     }
 
     @Test

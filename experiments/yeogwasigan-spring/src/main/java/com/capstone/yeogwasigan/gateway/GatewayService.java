@@ -27,6 +27,11 @@ import com.capstone.yeogwasigan.gateway.GatewayProperties.ApprovalMode;
 import com.capstone.yeogwasigan.gateway.GatewayProperties.Role;
 import com.capstone.yeogwasigan.gateway.GatewayRequest.Status;
 import com.capstone.yeogwasigan.gateway.GatewayRequest.Warning;
+import com.capstone.yeogwasigan.policy.PolicyEvaluator;
+import com.capstone.yeogwasigan.policy.PolicyEvaluator.Check;
+import com.capstone.yeogwasigan.policy.PolicyEvaluator.Decision;
+import com.capstone.yeogwasigan.policy.PolicyEvaluator.Tier;
+import com.capstone.yeogwasigan.policy.ResidualScanner;
 import com.capstone.yeogwasigan.preprocess.PreprocessProperties;
 import com.capstone.yeogwasigan.preprocess.Preprocessor;
 
@@ -40,6 +45,8 @@ import com.capstone.yeogwasigan.preprocess.Preprocessor;
  *       조건부 승인 모드에서는 높음 경고가 없는 요청을 요청자가 승인 없이 보낼 수 있다(docs/spec/14_APPROVAL_AND_WARNING.md).</li>
  *   <li>승인 지문 = SHA-256(파생본 해시 | 목록 버전 | 전송 대상). 전송 직전에 다시 계산해 다르면 보내지 않는다.</li>
  *   <li>등록된 전송 대상만 쓸 수 있다(D6). 전송 실패는 끝 상태이고 다시 보내려면 새 요청(D11).</li>
+ *   <li>요청을 만들 때 {@link PolicyEvaluator} 가 대상 등급(T2/T1/T0)과 Residual Scan·높음 경고로 다음 상태를 정한다.
+ *       거부(T0, 비밀값 잔존 등)는 DENIED 로 끝나고 파생본은 남기지 않는다(docs/spec/16_POLICY_EVALUATOR.md).</li>
  *   <li>요청과 감사 기록은 DB 에 남는다. 파생본은 보관 기간이 지나면 지운다(D12).</li>
  * </ul>
  */
@@ -55,6 +62,8 @@ public class GatewayService {
     private final Preprocessor preprocessor;
     private final GatewayRequestRepository requests;
     private final AuditEventRepository audit;
+    private final PolicyEvaluator policy;
+    private final ResidualScanner residual = new ResidualScanner();
 
     public GatewayService(GatewayProperties props, FilterRegistry filters, TemplateLoader templates,
                           AiClient aiClient, PreprocessProperties preprocessProps,
@@ -70,6 +79,7 @@ public class GatewayService {
                 null, 0, 0, preprocessProps.maxInputTokens()));
         this.requests = requests;
         this.audit = audit;
+        this.policy = new PolicyEvaluator(props.registry());
     }
 
     public List<Role> roles(String user) {
@@ -94,10 +104,8 @@ public class GatewayService {
         require(user, Role.REQUESTER);
         String p = purpose == null || purpose.isBlank() ? ExperimentConstants.PURPOSE_ID : purpose;
         templates.get(p);
+        // 등록되지 않은 대상(T0)도 여기서 막지 않고 정책 평가에서 DENIED 로 남긴다(차단 사유가 감사 기록에 남아야 한다)
         String endpoint = endpointId == null || endpointId.isBlank() ? props.endpoints().get(0) : endpointId;
-        if (!props.endpoints().contains(endpoint)) {
-            throw new IllegalArgumentException("등록되지 않은 전송 대상입니다: " + endpoint + " (등록: " + props.endpoints() + ")");
-        }
         if (log == null || log.isBlank()) {
             throw new IllegalArgumentException("로그가 비어 있습니다.");
         }
@@ -114,14 +122,25 @@ public class GatewayService {
         Instant now = Instant.now();
         List<Warning> warnings = warnings(r.output());
         int high = warnings.stream().filter(w -> w.level() == WarningRules.Level.HIGH).mapToInt(Warning::count).sum();
-        boolean approvalRequired = props.approvalMode() == ApprovalMode.ALWAYS || high > 0;
+        // 로그 파싱 실패는 위에서 400 으로 끝나 여기까지 오지 않는다. 역할·목적은 require()·templates.get() 이 이미 확인했다
+        ResidualScanner.Result scan = residual.scan(r.output());
+        PolicyEvaluator.Result decision = policy.evaluate(new PolicyEvaluator.Input(endpoint, true, true, Check.OK, scan, high,
+                props.approvalMode() == ApprovalMode.ALWAYS));
+        boolean approvalRequired = decision.decision() == Decision.REVIEW_PENDING;
         GatewayRequest req = new GatewayRequest(id, user, p, endpoint, sha256(log), logs.size(), listVersion(p),
                 r.output(), packageSha(r.output()), r.fieldsBefore(), r.fieldsAfter(), r.droppedFields(),
-                warnings, approvalRequired, now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
+                warnings, approvalRequired, decision.tier().name(), decision.reasonCode(),
+                now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
+        String summary = String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s(%s), 목록 %s, 높음 경고 %d건",
+                logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, decision.tier(), req.getListVersion(), high);
+        if (decision.denied()) {
+            req.deny(denyMessage(decision, scan));
+            requests.save(req);
+            log(id, user, "DENIED", summary + " → 거부 " + decision.reasonCode() + findings(scan) + " · " + decision.policyVersion());
+            return req;
+        }
         requests.save(req);
-        log(id, user, "CREATED", String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s, 목록 %s, 높음 경고 %d건 → %s",
-                logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion(), high,
-                approvalRequired ? "승인 필요" : "승인 없이 전송 가능(조건부)"));
+        log(id, user, "CREATED", summary + " → " + decision.decision() + " (" + decision.reasonCode() + ", " + decision.policyVersion() + ")");
         return req;
     }
 
@@ -240,10 +259,16 @@ public class GatewayService {
         if (!r.getPackageSha256().equals(seenPackageSha)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "화면에서 본 파생본과 지금 파생본이 다릅니다. 다시 열어 확인해 주세요.");
         }
+        // 보내기 직전에 같은 정책으로 다시 평가한다. 승인 없이 바로 보낼 수 있는 결과(READY)가 아니면 보내지 않는다
         int highNow = warnings(r.getPayload()).stream()
                 .filter(w -> w.level() == WarningRules.Level.HIGH).mapToInt(Warning::count).sum();
-        if (highNow > 0) {
-            fail(r, "WARNING_RECHECK_FAILED", "보내기 직전 검사에서 높음 경고 " + highNow + "건이 나와 보내지 않았습니다.");
+        ResidualScanner.Result scanNow = residual.scan(r.getPayload());
+        PolicyEvaluator.Result recheck = policy.evaluate(new PolicyEvaluator.Input(r.getEndpointId(), true, true, Check.OK,
+                scanNow, highNow, false));
+        if (!recheck.ready()) {
+            String why = PolicyEvaluator.REASON_HIGH_WARNING.equals(recheck.reasonCode())
+                    ? "높음 경고 " + highNow + "건이 나와" : recheck.reasonCode() + findings(scanNow) + " 이라";
+            fail(r, "POLICY_RECHECK_FAILED", "보내기 직전 검사에서 " + why + " 보내지 않았습니다.");
             requests.save(r);
             return r;
         }
@@ -284,6 +309,30 @@ public class GatewayService {
         }
         r.sent(a.text(), a.mode(), a.model());
         log(r.getId(), "gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자", r.getEndpointId(), a.model(), a.mode(), a.promptChars()));
+    }
+
+    private static String denyMessage(PolicyEvaluator.Result d, ResidualScanner.Result scan) {
+        return switch (d.reasonCode()) {
+            case PolicyEvaluator.REASON_T0_DESTINATION -> "등록되지 않은 전송 대상(T0)이라 보내지 않습니다.";
+            case ResidualScanner.REASON_SECRET_FOUND -> "파생본에 비밀값이 남아 보내지 않습니다." + findings(scan);
+            case ResidualScanner.REASON_ATOM_FOUND -> "파생본에 금지 항목이 남아 보내지 않습니다." + findings(scan);
+            case ResidualScanner.REASON_SCAN_FAILED -> "파생본 검사가 실패해 보내지 않습니다.";
+            default -> "정책에서 거부되었습니다: " + d.reasonCode();
+        };
+    }
+
+    /** Residual Scan 발견 위치(기록 순번·칸·규칙). 값은 남기지 않는다. */
+    private static String findings(ResidualScanner.Result scan) {
+        if (scan.findings().isEmpty()) {
+            return "";
+        }
+        return " [" + String.join(", ", scan.findings().stream()
+                .map(f -> "#" + f.record() + " " + f.field() + " " + f.ruleId()).toList()) + "]";
+    }
+
+    /** 등록부에서 읽은 대상 등급. 등록되지 않았으면 T0. */
+    public Tier tierOf(String endpointId) {
+        return policy.tierOf(endpointId);
     }
 
     private void fail(GatewayRequest r, String type, String reason) {
