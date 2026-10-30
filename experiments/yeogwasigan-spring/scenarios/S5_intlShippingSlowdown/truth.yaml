@@ -1,0 +1,6 @@
+# 정답지 — AI 에는 보내지 않는다. 필드 선택 알고리즘의 판정·단서 기준
+title: 해외 배송만 10초 느려짐
+root_cause:
+  summary: '배송(shipping) 서비스의 해외 배송만 10초 느려짐'
+# 1단계 단서 키워드 (scoring/scenarios.json 의 cause_hit_keywords ko+en). 한 줄 · 큰따옴표 목록으로 적는다
+cause_keywords: ["느려짐", "지연", "10초", "레이턴시", "slow", "latency", "delay", "10 seconds", "10s"]
