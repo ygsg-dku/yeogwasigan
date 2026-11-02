@@ -222,8 +222,11 @@ def main():
         out = Path(a.json)
         cand = [{"field": r[0], "verdict": r[8], "clue": r[1], "novel": r[3], "leak": r[4], "link": r[6]}
                 for r in sorted(keep, key=lambda r: (-r[1], -r[3], r[4]))]
+        # fields: 버림까지 전부 (목록 제안 화면이 1단계 점수표로 보여 준다)
+        fields = [{"field": r[0], "verdict": r[8], "clue": r[1], "novel": r[3], "leak": r[4], "link": r[6], "seen": r[7]}
+                  for r in sorted(rows, key=lambda r: (r[-1] == "버림", -r[1], -r[3], r[4], r[0]))]
         out.write_text(json.dumps({"dir": str(SCEN), "select": scen, "validate": validate, "context": CONTEXT,
-                                   "hand": HAND, "candidates": cand}, ensure_ascii=False, indent=1))
+                                   "hand": HAND, "candidates": cand, "fields": fields}, ensure_ascii=False, indent=1))
         print("\n후보", len(cand), "개 →", out)
 
 

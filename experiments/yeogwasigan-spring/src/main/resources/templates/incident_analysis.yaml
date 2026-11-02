@@ -1,5 +1,5 @@
 purposeId: INCIDENT_ANALYSIS
-displayName: 장애 원인 분석
+displayName: 장애 원인 분석 (사람이 고른 목록)
 description: 장애 로그에서 근본 원인과 근거를 찾는다
 
 # 원인 규명에 필요한 필드만 담는다

@@ -1,6 +1,8 @@
 package com.capstone.yeogwasigan.web;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.HexFormat;
 import java.util.List;
@@ -11,6 +13,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplicat
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
@@ -52,19 +56,28 @@ public class SecurityConfig {
     // 웹이 아닌 실행(experiment·blind·fieldsearch 프로파일)에는 HttpSecurity 가 없다
     @Bean
     @ConditionalOnWebApplication
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, Environment env) throws Exception {
+        // 시연(demo 프로파일): 로그인 화면 대신 /demo 로 보내 요청자 계정으로 바로 연다 (DemoSwitchController)
+        boolean demo = env.acceptsProfiles(Profiles.of("demo"));
         http.authorizeHttpRequests(a -> a
-                        .requestMatchers("/gateway.html", "/api/requests/**", "/api/gateway/**").authenticated()
+                        .requestMatchers("/gateway.html", "/proposals.html", "/api/requests/**", "/api/gateway/**", "/api/proposals/**").authenticated()
                         .anyRequest().permitAll())
                 .formLogin(f -> f.defaultSuccessUrl("/gateway.html", true))
                 .logout(l -> l.logoutSuccessUrl("/login?logout"))
                 .csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
                         .ignoringRequestMatchers(r -> !r.getRequestURI().startsWith("/api/requests")
+                                && !r.getRequestURI().startsWith("/api/proposals")
                                 && !r.getRequestURI().equals("/logout")))
                 // API 는 로그인 화면으로 돌리지 않고 401 로 답한다
-                .exceptionHandling(e -> e.defaultAuthenticationEntryPointFor(
-                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), r -> r.getRequestURI().startsWith("/api/")))
+                .exceptionHandling(e -> {
+                    e.defaultAuthenticationEntryPointFor(
+                            new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), r -> r.getRequestURI().startsWith("/api/"));
+                    if (demo) {
+                        e.defaultAuthenticationEntryPointFor((req, res, ex) -> res.sendRedirect("/demo?to="
+                                + URLEncoder.encode(req.getRequestURI(), StandardCharsets.UTF_8)), r -> !r.getRequestURI().startsWith("/api/"));
+                    }
+                })
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
         return http.build();
     }

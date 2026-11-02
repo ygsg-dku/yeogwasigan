@@ -160,6 +160,8 @@ public class FieldSearchRunner implements CommandLineRunner {
         Path runDir = Path.of(props.resultsDir()).toAbsolutePath()
                 .resolve("fieldsearch_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")));
         Files.createDirectories(runDir);
+        // 1단계 점수표도 같이 남긴다 (목록 제안 화면 /fieldsearch.html 이 읽는다)
+        Files.copy(Path.of(candidatesFile), runDir.resolve("candidates.json"));
         List<Scenario> select = selectIds.stream().map(scenarios::get).toList();
         List<Scenario> validate = validateIds.stream().map(scenarios::get).toList();
         log.info("AI 모드 {} · 고르는 장애 {} · 검증 장애 {} · 기준 {}칸 · 후보 {}개",
