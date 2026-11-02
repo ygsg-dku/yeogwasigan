@@ -14,44 +14,57 @@
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
   html, body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
-  body { font-family: var(--sans); font-size: 15px; line-height: 1.55; }
-  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; display: grid; gap: 24px; }
+  body { font-family: var(--sans); font-size: 17px; line-height: 1.6; }
+  ::selection { background: var(--ink); color: var(--paper); }
+  html { scrollbar-color: var(--g3) var(--g1); }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 24px 80px; display: grid; gap: 24px; }
   header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px;
            border-bottom: 3px solid var(--ink); padding-bottom: 12px; }
-  h1 { margin: 0; font-size: 30px; font-weight: 900; letter-spacing: -0.02em; }
-  h2 { margin: 0 0 10px; font-size: 17px; }
-  .sub { color: var(--g4); font-size: 14px; }
+  h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -0.02em; }
+  h2 { margin: 0 0 12px; font-size: 21px; letter-spacing: -0.01em; }
+  .sub { color: var(--g4); font-size: 16px; }
   .who { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   select, input[type=text], textarea { font: inherit; border: 1.5px solid var(--ink); background: var(--paper); padding: 6px 8px; }
-  textarea { width: 100%; height: 150px; font-family: var(--mono); font-size: 12px; }
-  button { font: inherit; font-weight: 700; border: 2px solid var(--ink); background: var(--paper); padding: 7px 14px; cursor: pointer; }
+  textarea { width: 100%; height: 140px; font-family: var(--mono); font-size: 14px; }
+  button { font: inherit; font-weight: 700; border: 2px solid var(--ink); background: var(--paper); padding: 9px 16px; cursor: pointer; }
   button.primary { background: var(--ink); color: var(--paper); }
   button:disabled { opacity: .35; cursor: not-allowed; }
   button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible, tr:focus-visible { outline: 3px solid var(--g3); outline-offset: 2px; }
-  .grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  .grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 24px; align-items: start; }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-  .card { border: 1.5px solid var(--ink); padding: 16px; display: grid; gap: 10px; min-width: 0; }
+  .card { border: 1.5px solid var(--ink); padding: 20px; display: grid; gap: 14px; min-width: 0; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .muted { color: var(--g4); font-size: 13px; }
+  .muted { color: var(--g4); font-size: 15px; }
   .err { border: 2px solid var(--ink); background: var(--g1); padding: 8px 10px; font-weight: 700; }
-  table { width: 100%; border-collapse: collapse; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--g2); }
-  th { font-size: 12px; color: var(--g4); font-weight: 500; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--g2); }
+  th { font-size: 14px; color: var(--g4); font-weight: 600; }
   tbody tr { cursor: pointer; }
+  #list td { white-space: nowrap; }
+  .scroll { overflow-x: auto; }
   tbody tr.sel { background: var(--g1); }
-  .st { font-family: var(--mono); font-size: 11.5px; padding: 1px 6px; border: 1px solid var(--ink); white-space: nowrap; }
+  .st { font-size: 14px; font-weight: 700; padding: 2px 8px; border: 1px solid var(--ink); white-space: nowrap; }
   .st.SENT { background: var(--ink); color: var(--paper); }
   .st.REJECTED, .st.SEND_FAILED { border-style: dashed; }
-  .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 14px; font-size: 13.5px; }
+  .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 18px; font-size: 16px; }
   .kv dt { color: var(--g4); }
-  .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; overflow-wrap: anywhere; }
-  pre { margin: 0; background: var(--g1); padding: 10px; font-family: var(--mono); font-size: 11.5px; max-height: 320px;
+  .kv dd { margin: 0; font-family: var(--mono); font-size: 15px; overflow-wrap: anywhere; }
+  pre { margin: 0; background: var(--g1); padding: 10px; font-family: var(--mono); font-size: 13.5px; line-height: 1.55; max-height: 320px;
         overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   mark { background: var(--ink); color: var(--paper); }
-  .audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
-  .audit li { display: grid; grid-template-columns: 70px 120px minmax(0, 1fr); gap: 8px; border-left: 3px solid var(--ink); padding-left: 8px; }
-  .audit b { font-family: var(--mono); font-size: 12px; }
-  details summary { cursor: pointer; font-size: 13px; color: var(--g4); }
+  .audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 15px; }
+  .audit li { display: grid; grid-template-columns: 96px 130px minmax(0, 1fr); gap: 8px; border-top: 1px solid var(--g2); padding-top: 8px; }
+  .audit b { font-family: var(--mono); font-size: 14px; }
+  details summary { cursor: pointer; font-size: 15px; color: var(--g4); }
+  /* 실제로 나갈 내용: JSON 대신 칸 = 열, 기록 = 행 */
+  .out { max-height: 440px; overflow: auto; border: 1.5px solid var(--ink); }
+  .out table { font-size: 15px; }
+  .out th { position: sticky; top: 0; background: var(--paper); border-bottom: 2px solid var(--ink); white-space: nowrap; font-family: var(--mono); font-size: 13.5px; }
+  .out td { font-family: var(--mono); font-size: 14px; vertical-align: top; white-space: nowrap; }
+  .out td.long { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 36ch; max-width: 70ch; }
+  .out tr.imp td { background: var(--g1); font-weight: 700; }
+  .out td:empty::after { content: "·"; color: var(--g2); }
+  .answer { margin: 0; background: var(--g1); padding: 16px 18px; font-size: 17px; line-height: 1.7; white-space: pre-wrap; max-height: 460px; overflow: auto; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -60,12 +73,14 @@
   <header>
     <div>
       <h1>여과시간 게이트웨이</h1>
-      <div class="sub">장애 로그 → 목록 10칸만 담은 파생본 → 다른 사람의 승인 → 등록된 AI 한 곳으로만</div>
+      <div class="sub">장애 로그 → 목록에 있는 칸만 담은 파생본 → 다른 사람의 승인 → 등록된 AI 한 곳으로만</div>
     </div>
     <div class="who">
       <span>로그인: <b id="who">…</b></span>
       <span id="roles" class="muted"></span>
+      <span id="demoSwitch" hidden style="gap: 6px; align-items: center"></span>
       <button id="logout" type="button">로그아웃</button>
+      <a href="/proposals.html" class="muted">목록 제안</a>
       <a href="/" class="muted">실험 데모</a>
     </div>
   </header>
@@ -80,6 +95,10 @@
           <label for="sample" class="muted">샘플</label>
           <select id="sample"><option value="">직접 붙여 넣기</option></select>
           <input type="file" id="file" accept=".jsonl,.json,.txt">
+        </div>
+        <div class="row">
+          <label for="purpose" class="muted">목록</label>
+          <select id="purpose"></select>
         </div>
         <textarea id="log" placeholder="장애 구간의 OTel 로그(JSONL)를 붙여 넣거나 파일을 고르세요."></textarea>
         <div class="row">
@@ -96,10 +115,10 @@
             <option value="REJECTED">반려</option><option value="SEND_FAILED">전송 실패</option>
           </select>
         </div>
-        <table>
+        <div class="scroll"><table>
           <thead><tr><th>요청</th><th>상태</th><th>요청자</th><th>필드</th><th>경고</th></tr></thead>
           <tbody id="list"><tr><td colspan="5" class="muted">아직 요청이 없습니다. 위에서 로그를 올려 파생본을 만드세요.</td></tr></tbody>
-        </table>
+        </table></div>
       </section>
     </div>
 
@@ -127,7 +146,7 @@ const xsrf = () => decodeURIComponent((document.cookie.match(/(?:^|; )XSRF-TOKEN
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": xsrf(), ...(opts.headers || {}) } });
-  if (res.status === 401) { location.href = "/login"; throw new Error("로그인이 필요합니다."); }
+  if (res.status === 401) { location.reload(); throw new Error("로그인이 필요합니다."); }
   const body = res.headers.get("content-type")?.includes("json") ? await res.json() : null;
   if (!res.ok) throw new Error(`${res.status} · ${body?.detail || res.statusText}`);
   return body;
@@ -138,6 +157,29 @@ function highlight(text) {
   let html = esc(text);
   for (const re of WARN) html = html.replace(re, (m) => `<mark>${m}</mark>`);
   return html;
+}
+
+// 파생본 미리보기(JSONL)를 표로: 칸 이름에서 resource./logRecord./attributes. 앞머리를 떼고, 시각은 시:분:초로
+const IMPORTANT = /^(warn|warning|error|fatal|critical)$/i;
+function previewTable(text) {
+  const rows = String(text || "").split("\n").filter((l) => l.trim()).map((l) => {
+    const flat = {};
+    const walk = (o, pre) => { for (const [k, v] of Object.entries(o || {})) {
+      if (v && typeof v === "object" && !Array.isArray(v)) walk(v, pre + k + "."); else flat[pre + k] = v; } };
+    try { walk(JSON.parse(l), ""); } catch { flat["(원문)"] = l; }
+    const out = {};
+    for (const [k, v] of Object.entries(flat)) out[k.replace(/^(resource|logRecord|scope)\./, "").replace(/^attributes\./, "")] = v;
+    return out;
+  });
+  const first = ["service.name", "timeUnixNano", "severityText"];
+  const cols = [...new Set([...first.filter((c) => rows.some((r) => c in r)), ...rows.flatMap(Object.keys)])];
+  const label = { "service.name": "서비스", timeUnixNano: "시각", severityText: "심각도" };
+  const cell = (c, v) => c === "timeUnixNano" && /^\d{16,}$/.test(String(v))
+    ? new Date(Number(String(v).slice(0, 13))).toLocaleTimeString("en-GB") + "." + String(v).slice(10, 13)
+    : highlight(v ?? "");
+  return `<table><thead><tr>${cols.map((c) => `<th title="${esc(c)}">${esc(label[c] || c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) =>
+    `<tr class="${IMPORTANT.test(r.severityText || "") ? "imp" : ""}">${cols.map((c) =>
+      `<td class="${String(r[c] ?? "").length > 40 ? "long" : ""}">${c in r ? cell(c, r[c]) : ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
 async function loadList() {
@@ -172,7 +214,9 @@ async function open(id) {
       <dt>승인 지문</dt><dd>${d.fingerprint ? d.fingerprint.slice(0, 16) + "…" : "—"}</dd>
       <dt>참고 경고</dt><dd>${warn}</dd>
     </dl>
-    <div><div class="muted">실제로 나갈 내용 (앞 ${d.previewRecords}건 / 전체 ${d.records}건, 검게 칠한 곳은 참고 경고)</div><pre>${highlight(d.preview)}</pre></div>
+    <div><h3 class="muted" style="margin:0 0 6px;font-weight:600">실제로 나갈 내용 · 앞 ${d.previewRecords}건 / 전체 ${d.records}건 · 굵은 줄은 WARN 이상, 검게 칠한 곳은 참고 경고</h3>
+      <div class="out">${previewTable(d.preview)}</div>
+      <details style="margin-top:8px"><summary>보낼 원문 그대로 (JSON)</summary><pre>${highlight(d.preview)}</pre></details></div>
     <details><summary>버려진 필드 ${d.droppedFields.length}개</summary><pre>${esc(d.droppedFields.join("\n"))}</pre></details>
     <div class="row">
       <button class="primary" id="approveBtn" ${canDecide ? "" : "disabled"}>승인하고 전송</button>
@@ -181,7 +225,7 @@ async function open(id) {
       <span class="muted">${why}</span>
     </div>
     ${d.comment ? `<div class="muted">사유: ${esc(d.comment)}</div>` : ""}
-    ${d.answer ? `<div><div class="muted">AI 답 (${esc(d.model)} · ${esc(d.answerMode)})</div><pre>${esc(d.answer)}</pre></div>` : ""}
+    ${d.answer ? `<div><h3 class="muted" style="margin:0 0 6px;font-weight:600">AI 답 (${esc(d.model)} · ${esc(d.answerMode)}) · 글자로만 표시, 실행하지 않음</h3><pre class="answer">${esc(d.answer)}</pre></div>` : ""}
     <div><div class="muted">감사 기록 (추가만 가능)</div><ul class="audit">${audit.map((a) => `
       <li><span>${new Date(a.at).toLocaleTimeString("ko-KR")}</span><b>${esc(a.type)}</b><span>${esc(a.actor)} · ${esc(a.detail)}</span></li>`).join("")}</ul></div>`;
   $("approveBtn").onclick = () => decide(true, d.packageSha256);
@@ -203,7 +247,7 @@ $("createBtn").onclick = async () => {
   try {
     showErr(null);
     $("createBtn").disabled = true;
-    const r = await api("/api/requests", { method: "POST", body: JSON.stringify({ log: $("log").value }) });
+    const r = await api("/api/requests", { method: "POST", body: JSON.stringify({ log: $("log").value, purpose: $("purpose").value }) });
     await open(r.id);
   } catch (e) { showErr(e); } finally { $("createBtn").disabled = false; }
 };
@@ -224,7 +268,21 @@ $("logout").onclick = async () => {
     $("who").textContent = me.user;
     $("roles").textContent = me.roles.join(", ");
     $("createCard").hidden = !roles().includes("REQUESTER");
-    const samples = (await api("/api/meta")).samples || [];
+    // 시연(demo 프로파일)일 때만 /demo/users 가 있다 → 로그인 없이 계정을 바꾸는 버튼
+    const demo = await fetch("/demo/users").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (demo) {
+      $("demoSwitch").innerHTML = "<span class=\"muted\">시연 전환</span>" + demo.map((u) => u === me.user
+        ? `<button type="button" class="primary" disabled>${esc(u)}</button>`
+        : `<button type="button" onclick="location.href='/demo/switch?user=${encodeURIComponent(u)}'">${esc(u)}</button>`).join("");
+      $("demoSwitch").hidden = false;
+      $("demoSwitch").style.display = "flex";
+    }
+    const meta = await api("/api/meta");
+    const samples = meta.samples || [];
+    $("purpose").innerHTML = (meta.purposes || []).map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join("");
+    // 목록 제안 화면에서 승인하고 넘어오면(?purpose=…) 그 목록을 미리 골라 둔다
+    const want = new URLSearchParams(location.search).get("purpose");
+    if (want && [...$("purpose").options].some((o) => o.value === want)) $("purpose").value = want;
     $("sample").innerHTML += samples.map((s) => `<option>${esc(s)}</option>`).join("");
     await loadList();
   } catch (e) { showErr(e); }
