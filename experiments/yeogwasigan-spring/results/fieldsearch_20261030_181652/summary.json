@@ -1,0 +1,73 @@
+{
+  "aiMode" : "live",
+  "model" : "gpt-4.1-mini",
+  "select" : [ "S1_paymentFailure", "S2_paymentUnreachable", "S3_productCatalogLockContention", "S4_kafkaQueueProblems", "S5_intlShippingSlowdown", "S6_productCatalogFailure" ],
+  "validate" : [ "E2a_adFailure", "E2b_cartFailure" ],
+  "maxScorePerSet" : 12,
+  "base" : {
+    "leak" : 0,
+    "score" : 4,
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.attributes.demo.order.id", "logRecord.traceId" ]
+  },
+  "gains" : [ {
+    "leakDelta" : 0,
+    "score" : 4,
+    "leak" : 0,
+    "gain" : 0,
+    "field" : "logRecord.attributes.details"
+  }, {
+    "leakDelta" : 0,
+    "score" : 8,
+    "leak" : 0,
+    "gain" : 4,
+    "field" : "logRecord.attributes.exception.message"
+  }, {
+    "leakDelta" : 0,
+    "score" : 8,
+    "leak" : 0,
+    "gain" : 4,
+    "field" : "logRecord.attributes.exception.stacktrace"
+  }, {
+    "leakDelta" : 0,
+    "score" : 2,
+    "leak" : 0,
+    "gain" : -2,
+    "field" : "logRecord.attributes.exception.type"
+  } ],
+  "chosen" : {
+    "selectLeak" : 0,
+    "selectScore" : 8,
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.attributes.demo.order.id", "logRecord.traceId", "logRecord.attributes.exception.message", "logRecord.attributes.exception.stacktrace" ]
+  },
+  "pruning" : [ {
+    "leakWithout" : 0,
+    "scoreWith" : 8,
+    "scoreWithout" : 10,
+    "dropped" : true,
+    "field" : "logRecord.attributes.exception.message"
+  }, {
+    "leakWithout" : 0,
+    "scoreWith" : 10,
+    "scoreWithout" : 2,
+    "dropped" : false,
+    "field" : "logRecord.attributes.exception.stacktrace"
+  } ],
+  "final" : {
+    "validateScore" : 4,
+    "validateLeak" : 0,
+    "selectScore" : 10,
+    "selectLeak" : 0,
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.attributes.demo.order.id", "logRecord.traceId", "logRecord.attributes.exception.stacktrace" ]
+  },
+  "compare" : {
+    "passthroughValidateScore" : 4,
+    "baseValidateLeak" : 0,
+    "baseValidateScore" : 4,
+    "passthroughValidateLeak" : 147
+  },
+  "hand" : {
+    "validateScore" : 4,
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.body", "logRecord.traceId", "logRecord.spanId", "logRecord.parentSpanId", "logRecord.attributes.exception.message", "logRecord.attributes.exception.type", "logRecord.attributes.http.response.status_code" ],
+    "validateLeak" : 1
+  }
+}

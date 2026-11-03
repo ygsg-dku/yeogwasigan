@@ -1,0 +1,17 @@
+# 필드 탐색 결과 (FieldSearchRunner). 검토·승인 전 초안
+purposeId: INCIDENT_ANALYSIS_AUTO
+displayName: 장애 원인 분석 (알고리즘 제안)
+description: 필드 선택 알고리즘이 제안한 목록
+requiredFields:
+  - resource.service.name
+  - logRecord.timeUnixNano
+  - logRecord.severityText
+  - logRecord.attributes.demo.order.id
+  - logRecord.traceId
+  - logRecord.attributes.exception.stacktrace
+fieldActions:
+  logRecord.attributes.demo.order.id: TOKENIZE_CASE_SCOPED
+  logRecord.traceId: TOKENIZE_CASE_SCOPED
+onUnknownField: DROP
+innerScanOnKeptFields: false
+bodyOnlyWhenImportant: true
