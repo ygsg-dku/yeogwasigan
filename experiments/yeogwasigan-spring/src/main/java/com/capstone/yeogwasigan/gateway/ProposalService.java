@@ -166,7 +166,7 @@ public class ProposalService {
             JsonNode input = JSON.readTree(dir.resolve("candidates.json").toFile());
             p.add("start", "입력: 원인이 밝혀진 지난 장애 로그", Map.of(
                     "select", input.path("select"), "validate", input.path("validate"), "context", input.path("context"),
-                    "titles", titles(Path.of(input.path("dir").asText()), input)));
+                    "titles", titles(scenarioDir(input), input)));
 
             // 1단계: 실제 실행
             long t0 = System.nanoTime();
@@ -248,7 +248,7 @@ public class ProposalService {
     private JsonNode scoreFields(JsonNode in) throws IOException, InterruptedException {
         Path out = Files.createTempFile("field_select", ".json");
         try {
-            List<String> cmd = List.of("python3", "scripts/field_select.py", "--dir", in.path("dir").asText(),
+            List<String> cmd = List.of("python3", "scripts/field_select.py", "--dir", scenarioDir(in).toString(),
                     "--normal", in.path("normal").asText("S0_normal"), "--select", join(in.path("select")),
                     "--validate", join(in.path("validate")), "--context", join(in.path("context")), "--json", out.toString());
             Process proc = new ProcessBuilder(cmd).redirectErrorStream(true).start();
@@ -339,6 +339,15 @@ public class ProposalService {
             out.put(id.asText(), title);
         }
         return out;
+    }
+
+    /**
+     * 실행 기록에 적힌 장애 폴더. 기록은 실행한 컴퓨터의 절대 경로라 다른 컴퓨터에는 없을 수 있다 —
+     * 그때는 프로젝트 안의 같은 이름 폴더(보통 scenarios)를 쓴다.
+     */
+    private static Path scenarioDir(JsonNode in) {
+        Path p = Path.of(in.path("dir").asText());
+        return Files.isDirectory(p) || p.getFileName() == null ? p : Path.of(p.getFileName().toString());
     }
 
     private static String join(JsonNode arr) {
