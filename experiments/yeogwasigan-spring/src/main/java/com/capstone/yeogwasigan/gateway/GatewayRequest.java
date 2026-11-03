@@ -50,6 +50,8 @@ public class GatewayRequest {
     private String tier;
     /** 정책 평가 결과를 만든 규칙(사유 코드) */
     private String policyReason;
+    /** 만들 때 평가에 쓴 정책 규칙 버전(예: policy-v1). 승인 지문에 들어간다. null 은 예전 기록 */
+    private String policyVersion;
     private String inputSha256;
     private int inputRecords;
     private String listVersion;
@@ -91,7 +93,8 @@ public class GatewayRequest {
     GatewayRequest(String id, String requester, String purpose, String endpointId, String inputSha256,
                    int inputRecords, String listVersion, List<Map<String, Object>> payload, String packageSha256,
                    int fieldsBefore, int fieldsAfter, List<String> droppedFields, List<Warning> warnings,
-                   boolean approvalRequired, String tier, String policyReason, Instant createdAt, Instant payloadExpiresAt) {
+                   boolean approvalRequired, String tier, String policyReason, String policyVersion,
+                   Instant createdAt, Instant payloadExpiresAt) {
         this.id = id;
         this.requester = requester;
         this.purpose = purpose;
@@ -108,6 +111,7 @@ public class GatewayRequest {
         this.approvalRequired = approvalRequired;
         this.tier = tier;
         this.policyReason = policyReason;
+        this.policyVersion = policyVersion;
         this.createdAt = createdAt;
         this.payloadExpiresAt = payloadExpiresAt;
     }
@@ -118,6 +122,7 @@ public class GatewayRequest {
     public String getEndpointId() { return endpointId; }
     public String getTier() { return tier; }
     public String getPolicyReason() { return policyReason; }
+    public String getPolicyVersion() { return policyVersion; }
     public String getInputSha256() { return inputSha256; }
     public int getInputRecords() { return inputRecords; }
     public String getListVersion() { return listVersion; }
