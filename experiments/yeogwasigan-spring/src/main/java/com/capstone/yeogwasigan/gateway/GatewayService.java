@@ -43,7 +43,8 @@ import com.capstone.yeogwasigan.preprocess.Preprocessor;
  *   <li>요청자와 승인자는 달라야 한다(D5).</li>
  *   <li>참고 경고는 {@link WarningRules} 기준(높음·낮음). 높음 경고가 있는 요청을 승인하려면 승인자가 "오탐 확인"과 사유를 남겨야 한다.
  *       조건부 승인 모드에서는 높음 경고가 없는 요청을 요청자가 승인 없이 보낼 수 있다(docs/spec/14_APPROVAL_AND_WARNING.md).</li>
- *   <li>승인 지문 = SHA-256(파생본 해시 | 목록 버전 | 전송 대상). 전송 직전에 다시 계산해 다르면 보내지 않는다.</li>
+ *   <li>승인 지문 = SHA-256(파생본 해시 | 목록 버전 | 전송 대상 | 대상 등급 | 정책 규칙 버전). 승인할 때는 요청을 만들 때 정해진 값으로,
+ *       전송 직전에는 지금 값으로 다시 계산해 하나라도 다르면 보내지 않는다(승인 무효화, docs/spec/18_APPROVAL_INVALIDATION.md).</li>
  *   <li>등록된 전송 대상만 쓸 수 있다(D6). 전송 실패는 끝 상태이고 다시 보내려면 새 요청(D11).</li>
  *   <li>요청을 만들 때 {@link PolicyEvaluator} 가 대상 등급(T2/T1/T0)과 Residual Scan·높음 경고로 다음 상태를 정한다.
  *       거부(T0, 비밀값 잔존 등)는 DENIED 로 끝나고 파생본은 남기지 않는다(docs/spec/16_POLICY_EVALUATOR.md).</li>
@@ -129,7 +130,7 @@ public class GatewayService {
         boolean approvalRequired = decision.decision() == Decision.REVIEW_PENDING;
         GatewayRequest req = new GatewayRequest(id, user, p, endpoint, sha256(log), logs.size(), listVersion(p),
                 r.output(), packageSha(r.output()), r.fieldsBefore(), r.fieldsAfter(), r.droppedFields(),
-                warnings, approvalRequired, decision.tier().name(), decision.reasonCode(),
+                warnings, approvalRequired, decision.tier().name(), decision.reasonCode(), decision.policyVersion(),
                 now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
         String summary = String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s(%s), 목록 %s, 높음 경고 %d건",
                 logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, decision.tier(), req.getListVersion(), high);
@@ -230,7 +231,7 @@ public class GatewayService {
                 }
                 note = "높음 경고 " + high + "건 오탐 확인: " + comment.trim();
             }
-            String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
+            String fp = approvedFingerprint(r);
             r.approve(user, fp, note);
             requests.save(r);
             log(id, user, "APPROVED", "지문 " + fp.substring(0, 12) + (note != null ? " · " + note : "") + " · 대기 " + waited(r));
@@ -272,7 +273,7 @@ public class GatewayService {
             requests.save(r);
             return r;
         }
-        String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
+        String fp = approvedFingerprint(r);
         r.skipApproval(fp, "승인 생략: 높음 경고 없음(조건부 승인)");
         requests.save(r);
         log(id, user, "APPROVAL_SKIPPED", "높음 경고 없음 · 조건부 승인 · 지문 " + fp.substring(0, 12));
@@ -291,11 +292,32 @@ public class GatewayService {
         return s >= 60 ? (s / 60) + "분 " + (s % 60) + "초" : s + "초";
     }
 
-    /** 전송 직전 재확인: 파생본·목록 버전·전송 대상 중 하나라도 바뀌었으면 보내지 않는다. */
+    /**
+     * 전송 직전 재확인(승인 무효화): 승인 지문을 지금 값으로 다시 계산한다.
+     * 파생본·목록 버전·전송 대상·대상 등급·정책 규칙 버전 중 하나라도 승인 때와 다르면 보내지 않는다.
+     * 승인은 다시 쓸 수 없고, 바뀐 조건으로 보내려면 새 요청을 만들어 다시 평가·승인받는다(D11).
+     */
     private void dispatch(GatewayRequest r) {
-        String now = fingerprint(packageSha(r.getPayload()), listVersion(r.getPurpose()), r.getEndpointId());
+        String payloadSha = packageSha(r.getPayload());
+        String listNow = listVersion(r.getPurpose());
+        String tierNow = policy.tierOf(r.getEndpointId()).name();
+        String now = fingerprint(payloadSha, listNow, r.getEndpointId(), tierNow, PolicyEvaluator.POLICY_VERSION);
         if (!now.equals(r.getFingerprint())) {
-            fail(r, "FINGERPRINT_MISMATCH", "승인 뒤 파생본·목록·전송 대상이 바뀌어 보내지 않았습니다.");
+            List<String> changed = new ArrayList<>();
+            if (!payloadSha.equals(r.getPackageSha256())) {
+                changed.add("파생본");
+            }
+            if (!listNow.equals(r.getListVersion())) {
+                changed.add("목록 " + r.getListVersion() + "→" + listNow);
+            }
+            if (!tierNow.equals(r.getTier())) {
+                changed.add("대상 등급 " + r.getTier() + "→" + tierNow);
+            }
+            if (!PolicyEvaluator.POLICY_VERSION.equals(r.getPolicyVersion())) {
+                changed.add("정책 규칙 " + r.getPolicyVersion() + "→" + PolicyEvaluator.POLICY_VERSION);
+            }
+            String what = changed.isEmpty() ? "전송 대상" : String.join(", ", changed);
+            fail(r, "FINGERPRINT_MISMATCH", "승인 뒤 바뀌어 보내지 않았습니다(" + what + "). 새 요청을 만들어 다시 승인받으세요.");
             return;
         }
         if (!props.endpoints().contains(r.getEndpointId()) || !r.getEndpointId().equals(aiClient.provider())) {
@@ -364,8 +386,14 @@ public class GatewayService {
         return sha256(LogFormat.serialize(payload));
     }
 
-    static String fingerprint(String packageSha, String listVersion, String endpointId) {
-        return sha256(packageSha + "|" + listVersion + "|" + endpointId);
+    /** 승인 지문. 순서를 바꾸면 예전 지문과 맞지 않으니 바꾸지 말 것 */
+    static String fingerprint(String packageSha, String listVersion, String endpointId, String tier, String policyVersion) {
+        return sha256(packageSha + "|" + listVersion + "|" + endpointId + "|" + tier + "|" + policyVersion);
+    }
+
+    /** 승인(또는 승인 생략) 때 찍는 지문: 요청을 만들 때 평가·표시된 값으로 계산한다 */
+    private static String approvedFingerprint(GatewayRequest r) {
+        return fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId(), r.getTier(), r.getPolicyVersion());
     }
 
     /** 경고 종류별 건수(규칙 순서). 위치까지 필요하면 {@link WarningRules#scan}. */
