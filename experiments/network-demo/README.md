@@ -40,9 +40,9 @@
 노트북에서 학교 VPN 을 켠 뒤:
 
 ```bash
-ssh -p 2201 <VM 계정>@10.0.1.37
+ssh -i $HOME\.ssh\dku_yeogwa -p 2201 ubuntu@10.0.1.37
 
-sudo apt update && sudo apt install -y openjdk-17-jdk git
+sudo apt update && sudo apt install -y openjdk-17-jdk-headless git   # headless: 학교 저장소의 mesa 패키지 오류 피함
 git clone https://github.com/ygsg-dku/yeogwasigan.git
 cd yeogwasigan/experiments/yeogwasigan-spring
 ./gradlew bootJar -x test
@@ -64,7 +64,7 @@ SSH 를 끊어도 계속 돌게 하려면 `tmux` 안에서 실행한다.
 ## 2. 회사 VM (yeogwa-company)
 
 ```bash
-ssh -p 2202 <VM 계정>@10.0.1.37
+ssh -i $HOME\.ssh\dku_yeogwa -p 2202 ubuntu@10.0.1.37
 
 git clone https://github.com/ygsg-dku/yeogwasigan.git
 cd yeogwasigan/experiments/network-demo/company
@@ -80,6 +80,8 @@ python3 shipper.py --gateway http://192.168.0.138:8080
 ## 화면 E2E 완주 기록
 
 2026-11-07 학교 VM 게이트웨이로 진행한 기록: [docs/E2E_화면_완주_1107.md](docs/E2E_화면_완주_1107.md)
+
+DKU Cloud 콘솔 설정(VM·네트워크·포트포워딩·방화벽·SSH 키) 캡처: [docs/DKU_클라우드_구성.md](docs/DKU_클라우드_구성.md)
 
 ## 3. 시연 순서 (약 3분)
 
