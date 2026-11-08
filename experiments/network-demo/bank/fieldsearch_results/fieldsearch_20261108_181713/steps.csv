@@ -1,0 +1,939 @@
+phase,set,added_field,scenario,fields,leak,judge,prompt_chars,answer
+prune,빼기-logRecord.attributes.error.type,logRecord.attributes.error.type,BANK_F1_kftcTimeout,9,0,2,77135,"로그 상에서 드러나는 장애의 근본 원인은:
+
+> **core-ledger가 KFTC(대외기관) `/interbank` API를 호출할 때, 대외기관 측에서 응답을 주지 않아 3초 타임아웃(TimeoutError)이 반복적으로 발생한 것**입니다.  
+> 즉, **대외기관(가람은행/누리은행) 또는 그 앞단(KFTC Relay) 구간의 응답 지연/미응답**이 근본 원인입니다.
+
+아래는 그렇게 판단한 근거입니다.
+
+---
+
+## 1. 에러 패턴
+
+에러는 모두 `core-ledger` 서비스에서 발생하며, 메시지가 동일한 패턴입니다.
+
+예시 1:
+```json
+""severityText"":""ERROR"",
+""body"":""타행이체 실패: 대외기관 응답 없음 (가람은행) 3003ms (timeout=3000ms), 출금 취소 txn=20"",
+""attributes"":{
+  ""exception.message"":""timed out"",
+  ""exception.stacktrace"":""... TimeoutError: timed out""
+}
+```
+
+예시 2:
+```json
+""severityText"":""ERROR"",
+""body"":""타행이체 실패: 대외기관 응답 없음 (누리은행) 3003ms (timeout=3000ms), 출금 취소 txn=27"",
+...
+""exception.message"":""timed out""
+```
+
+공통점:
+- 메시지에 **“대외기관 응답 없음 … 3003ms (timeout=3000ms)”** 라고 명시
+- Python `urllib.request.urlopen(..., timeout=timeout)` 에서 **`TimeoutError: timed out`** 발생
+- 타임아웃 값은 `KFTC_TIMEOUT_S = 3`초로 보이고, 실제 측정 시간도 약 3003ms로 기록
+
+이는 **core-ledger → KFTC_URL(""/interbank"") HTTP 호출이 3초 안에 응답을 받지 못해 타임아웃**된 상황입니다.
+
+---
+
+## 2. 호출 경로와 어디서 끊기는지
+
+코드 스택트레이스:
+
+```python
+core.py line 116 in transfer
+  code, res = post_json(KFTC_URL + ""/interbank"", {...}, span, KFTC_TIMEOUT_S)
+
+common.py line 102 in post_json
+  with urllib.request.urlopen(req, timeout=timeout) as r:
+    ...
+socket.py ... TimeoutError: timed out
+```
+
+의미:
+- core-ledger는 내부 계좌 출금까지 처리한 뒤, **대외기관 이체를 위해 KFTC_URL + ""/interbank""** 로 HTTP POST를 보냄.
+- 이 호출이 **TCP 레벨에서 응답을 기다리다가(read) 타임아웃**으로 끝남.
+- 즉, **요청은 나갔지만, 응답 헤더/바디를 제때 받지 못함**.
+
+또한, 에러 메시지에 은행명이 포함됩니다:
+- `(가람은행)` 또는 `(누리은행)`
+- 이는 KFTC 또는 대외기관 라우팅 로직 상, **특정 타행(가람/누리)으로 가는 이체 요청에서만 응답이 안 온다**는 의미입니다.
+
+---
+
+## 3. 다른 트랜잭션은 정상 동작
+
+동일 시점에 다른 로그들을 보면:
+
+- `kftc-relay`, `core-ledger`, `channel-ibk` 간 INFO 로그가 계속 정상적으로 찍히고 있습니다.
+- 예를 들어, 에러 직전/직후에도 다음과 같은 정상 이체/입출금 로그가 다수 존재합니다.
+
+예:
+```json
+{""service.name"":""kftc-relay"",""severityText"":""INFO"",""traceId"":""TX_41C46140"", ...}
+{""service.name"":""core-ledger"",""severityText"":""INFO"",""traceId"":""TX_41C46140"", ...}
+{""service.name"":""channel-ibk"",""severityText"":""INFO"",""traceId"":""TX_41C46140"", ...}
+```
+
+또는 단순 계좌 거래:
+```json
+{""service.name"":""core-ledger"",""severityText"":""INFO"",""traceId"":""TX_E2235521"", ...}
+{""service.name"":""channel-ibk"",""severityText"":""INFO"",""traceId"":""TX_E2235521"", ...}
+```
+
+이로부터:
+- **core-ledger 자체는 계속 정상적으로 다른 요청을 처리**하고 있음
+- `channel-ibk`도 정상 응답을 내고 있음
+- 장애는 **특정 외부 연동(KFTC_URL + ""/interbank"") 호출에 국한**되어 있음
+
+즉, **내부 시스템(core-ledger, channel-ibk)이나 전체 네트워크가 죽은 것이 아니라"
+prune,빼기-logRecord.attributes.error.type,logRecord.attributes.error.type,BANK_F2_ledgerLock,9,0,1,61679,"로그 상에서 드러나는 장애의 근본 원인은:
+
+**SQLite 단일 파일 DB를 여러 트랜잭션이 동시에 쓰려고 하면서, 적절한 동시성 제어/설정 없이 `BEGIN IMMEDIATE`를 사용해 쓰기 락을 잡으려다 `database is locked` 에러가 대량으로 발생한 것**입니다.  
+(즉, 설계·구현 상의 동시성 제어 미비 + SQLite 특성에 대한 고려 부족이 근본 원인입니다.)
+
+---
+
+### 1. 무엇이 실제로 실패했는가
+
+에러 로그들을 보면 모두 `core-ledger` 서비스에서 발생합니다.
+
+예시:
+
+```json
+{""resource"":{""service.name"":""core-ledger""},""logRecord"":{
+  ""severityText"":""ERROR"",
+  ""body"":""타행이체 원장 기록 실패: database is locked (busy_timeout=2000ms)"",
+  ""traceId"":""TX_B6C7703A"",
+  ""attributes"":{
+    ""account.number"":""TX_FBB8C90A"",
+    ""exception.message"":""database is locked"",
+    ""exception.stacktrace"":""Traceback (most recent call last):
+  File \"".../core.py\"", line 84, in transfer
+    con.execute(\""BEGIN IMMEDIATE\"")
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: database is locked""
+}}}
+```
+
+동일 패턴의 에러가 계속 반복됩니다:
+
+- 메시지:  
+  - `당행이체 원장 기록 실패: database is locked (busy_timeout=2000ms)`
+  - `타행이체 원장 기록 실패: database is locked (busy_timeout=2000ms)`
+- 예외: `sqlite3.OperationalError: database is locked`
+- 공통 코드 위치: `core.py` 84라인 `con.execute(""BEGIN IMMEDIATE"")`
+
+이 에러가 발생할 때마다 `channel-ibk` 쪽에서는:
+
+```json
+{""resource"":{""service.name"":""channel-ibk""},""logRecord"":{
+  ""severityText"":""ERROR"",
+  ""body"":""/api/transfer 실패 500: 계정계 오류 원장 기록 실패: database is locked"",
+  ...
+}}
+```
+
+즉:
+
+- `core-ledger`가 원장(ledger) DB에 트랜잭션을 시작하려다 실패
+- 그 결과 `/api/transfer` 요청이 500 에러로 실패
+
+장애의 직접적인 증상은 **이체 API가 500으로 떨어지고, 원장 기록이 실패하는 것**입니다.
+
+---
+
+### 2. 왜 `database is locked`가 이렇게 많이 발생하는가
+
+핵심 단서:
+
+1. **SQLite 사용 + `BEGIN IMMEDIATE`**
+   - `BEGIN IMMEDIATE`는 트랜잭션 시작 시점에 **바로 쓰기 락(write lock)** 을 잡으려 합니다.
+   - 이미 다른 커넥션이 쓰기 트랜잭션을 잡고 있거나, 읽기 락이 걸려 있으면 `database is locked`가 납니다.
+
+2. **busy_timeout=2000ms**
+   - 로그 메시지에 `(busy_timeout=2000ms)`가 명시되어 있습니다.
+   - 즉, 최대 2초까지 락이 풀리기를 기다렸지만, 그 안에 락을 못 얻어서 실패했다는 뜻입니다.
+   - 단발성 충돌이 아니라, **2초 이상 지속되는 락 경합**이 반복되고 있다는 의미입니다.
+
+3. **짧은 시간 동안 다수의 트랜잭션 시도**
+   - 에러 로그들의 `timeUnixNano`를 보면, 수십~수백 ms 간격으로 계속 새로운 transfer가 들어오고, 그 중 상당수가 `database is locked`로 실패합니다.
+   - 예:
+     - 1794126508485xxx (TX_B6C7703A)
+     - 1794126509219xxx (TX_E907AA5C)
+     - 1794126509774xxx (TX_150D70A7)
+     - 1794126510230xxx (TX_C57DD734)
+     - … 이후에도 같은 패턴이 계속
+
+   이는 **동시에 많은 이체 요청이 들어와서, 모두가 같은 SQLite 파일에 쓰기 트랜잭션을 열려고 경쟁**하고 있음을 보여줍니다.
+
+4. **서비스 구조 상 단일 원장 DB에 집중되는 쓰기**
+   - `core-ledger` 서비스가 계정계 원장 역할을 하고 있고,
+   - `channel-ibk`, `kftc-relay` 등에서 들어오는 이체 요청이 모두 `core-ledger`의 `transfer` 함수로 모입니다.
+   - 따라서 **모든 이체가 하나의 SQLite"
+prune,빼기-logRecord.attributes.exception.stacktrace,logRecord.attributes.exception.stacktrace,BANK_F1_kftcTimeout,8,0,2,57755,"로그 상에서 드러나는 장애의 근본 원인은 “대외기관(타행) 응답 지연/미수신으로 인한 타임아웃”입니다.  
+조금 더 구체적으로 말하면, 우리 쪽 시스템(core-ledger, channel-ibk)은 정상 동작하고 있고, 타행(가람은행, 누리은행) 쪽 응답이 3초 내에 오지 않아 타임아웃이 발생하면서 이체가 실패한 상황입니다.
+
+---
+
+## 1. 어떤 장애가 발생했는지
+
+에러 로그 패턴을 보면 모두 동일합니다.
+
+예시 1:
+```json
+{""service.name"":""core-ledger"",
+ ""severityText"":""ERROR"",
+ ""body"":""타행이체 실패: 대외기관 응답 없음 (가람은행) 3003ms (timeout=3000ms), 출금 취소 txn=20"",
+ ""traceId"":""TX_3D75622D"",
+ ""attributes"":{""account.number"":""TX_CB0C8B99"",""exception.message"":""timed out""}}
+```
+
+이에 대응하는 channel-ibk 로그:
+```json
+{""service.name"":""channel-ibk"",
+ ""severityText"":""ERROR"",
+ ""body"":""/api/transfer 실패 504: 계정계 오류 대외기관 응답 없음"",
+ ""traceId"":""TX_3D75622D"",
+ ""attributes"":{""account.number"":""TX_CB0C8B99"",""counterparty.account"":""TX_AA72E044""}}
+```
+
+동일 패턴의 에러가 여러 번 반복됩니다.
+
+- TX_3D75622D: 가람은행, 3003ms (timeout=3000ms)
+- TX_A7099EFD: 가람은행, 3003ms (timeout=3000ms)
+- TX_8B257B58: 누리은행, 3003ms (timeout=3000ms)
+- TX_9DA0F0FC: 가람은행, 3003ms (timeout=3000ms)
+- TX_149294A9: 가람은행, 3003ms (timeout=3000ms)
+- TX_3BDB3E11: 가람은행, 3003ms (timeout=3000ms)
+
+공통점:
+- 모두 “타행이체 실패: 대외기관 응답 없음”
+- 실제 소요 시간은 약 3003ms
+- 설정된 timeout은 3000ms
+- 결과적으로 core-ledger는 “출금 취소”를 수행하고, channel-ibk는 504 Gateway Timeout(“계정계 오류 대외기관 응답 없음”)을 클라이언트에 반환
+
+즉, 우리 시스템이 타행(가람은행/누리은행)에 이체 요청을 보냈으나, 3초 안에 응답이 오지 않아 타임아웃이 발생하고, 그에 따라 거래를 롤백(출금 취소)한 것입니다.
+
+---
+
+## 2. 우리 쪽 시스템(core-ledger, channel-ibk)이 원인인지 여부
+
+로그 흐름을 보면:
+
+- 대부분의 거래에서
+  - kftc-relay → core-ledger → channel-ibk 순으로 INFO 로그가 정상적으로 찍히고,
+  - 내부 계좌 간 이체나 다른 타행과의 거래는 계속 정상 처리되고 있습니다.
+- 에러가 발생한 트랜잭션들만 특정 타행(가람은행, 누리은행)과의 통신에서만 “응답 없음”으로 실패합니다.
+- 에러 직전/직후에도 core-ledger, channel-ibk는 다른 계좌/다른 거래를 정상 처리하고 있습니다.
+
+예를 들어, TX_3D75622D 에러 직후 바로 다음 로그:
+```json
+{""service.name"":""core-ledger"",""severityText"":""INFO"",""traceId"":""TX_1685CFFD"", ...}
+{""service.name"":""channel-ibk"",""severityText"":""INFO"",""traceId"":""TX_1685CFFD"", ...}
+```
+이처럼 에러가 난 시점에도 다른 거래는 정상적으로 처리되고 있어, core-ledger나 channel-ibk 자체가 다운되거나 병목 상태에 빠진 것은 아닙니다.
+
+또한 에러 메시지에 “3003ms (timeout=3000ms)”가 명시되어 있어,  
+- 우리 쪽에서 타행 응답을 기다린 시간은 정확히 timeout 설정값 근처
+- 예외 메시지도 `timed out`
+
+즉, 우리 시스템은 설정된 타임아웃대로 동작하고 있고, 문제는 그 시간 안에 응답을 주지 못한 “대외기관(타행)” 쪽에 있습니다.
+
+---
+
+## 3. 근본 원인 정리
+
+로그만으로 판단할 수"
+prune,빼기-logRecord.attributes.exception.stacktrace,logRecord.attributes.exception.stacktrace,BANK_F2_ledgerLock,8,0,2,52719,"로그 상에서 드러나는 장애의 “직접적인” 원인과, 그 뒤에 있는 “근본 원인”을 나눠서 설명하겠습니다.
+
+---
+
+## 1. 무엇이 장애를 일으켰는가? (표면 원인)
+
+에러 로그 패턴을 보면, 모든 실패가 동일한 형태입니다.
+
+- 서비스: `core-ledger`
+- 에러 메시지(예):
+  - `타행이체 원장 기록 실패: database is locked (busy_timeout=2000ms)`
+  - `당행이체 원장 기록 실패: database is locked (busy_timeout=2000ms)`
+- `exception.message`: `""database is locked""`
+- 그에 따라 `channel-ibk`에서:
+  - `""/api/transfer 실패 500: 계정계 오류 원장 기록 실패: database is locked""`
+
+즉, 계정계 원장 기록을 담당하는 `core-ledger` 서비스가 사용하는 DB에서 `database is locked` 에러가 발생했고, 이로 인해 원장 기록이 실패하면서 `/api/transfer` 요청이 500으로 떨어진 것이 장애의 직접적인 원인입니다.
+
+정리하면:
+
+> **직접 원인:** `core-ledger`가 사용하는 데이터베이스가 잠금 경합(lock contention)으로 인해 2초(`busy_timeout=2000ms`) 안에 쓰기 락을 획득하지 못해 `database is locked` 에러를 다량으로 발생시켰고, 그 결과 이체 원장 기록이 실패하여 API가 500 에러를 반환함.
+
+---
+
+## 2. 왜 database is locked가 집중적으로 발생했는가? (근본 원인 추론)
+
+로그 흐름을 시간 순으로 보면:
+
+1. `179412650.8485초` 부근에서 첫 `database is locked` 에러(`TX_B6C7703A`)가 발생합니다.
+2. 이후 약 2초 간격으로, 매우 많은 트랜잭션에서 동일한 에러가 연속적으로 발생합니다.
+3. 에러가 나는 동안에도 `core-ledger`와 `channel-ibk`의 INFO 로그(정상 조회/처리로 보이는 로그)는 계속 찍히고 있습니다. 즉, 서비스 자체는 살아 있고, 특정 “쓰기” 작업(원장 기록)만 실패하는 패턴입니다.
+4. 에러 메시지에 공통으로 `busy_timeout=2000ms`가 포함되어 있어, DB 클라이언트가 2초 동안 락 해제를 기다렸다가 포기하는 설정임을 알 수 있습니다.
+
+이 패턴은 다음과 같은 상황을 강하게 시사합니다.
+
+- `core-ledger`가 사용하는 DB는 **동시 쓰기 처리에 제약이 큰 구조**입니다.
+  - 예: SQLite 또는 단일 writer만 허용하는 구조/설정.
+- 어떤 트랜잭션(또는 배치 작업)이 **장시간 트랜잭션을 열어 놓고 쓰기 락을 잡은 상태**에서 해제하지 못했거나,
+- 또는 **짧은 쓰기 트랜잭션이 매우 높은 동시성으로 몰리면서** 항상 누군가가 쓰기 락을 잡고 있는 상태가 되어, 나머지 쓰기들이 2초 안에 락을 못 얻고 실패하는 상황.
+
+로그 상에서 눈에 띄는 점:
+
+- `179412650.6207421000` 시점에 `batch-interest` 서비스의 INFO 로그가 한 번 등장합니다.
+- 그 직후(약 0.2초 뒤)부터 `core-ledger`의 쓰기 실패(`database is locked`)가 본격적으로 발생하기 시작합니다.
+
+이로부터 합리적으로 추론할 수 있는 시나리오는:
+
+1. `batch-interest`가 이자 계산/반영 배치를 수행하면서, `core-ledger`가 사용하는 **같은 DB에 대해 대량의 원장 업데이트(또는 긴 트랜잭션)**를 수행.
+2. 이 배치 트랜잭션이 DB에 대한 쓰기 락을 오래 잡고 있거나, 매우 많은 row를 갱신하면서 지속적으로 쓰기 락을 점유.
+3. 그 시점에 들어온 실시간 이체 요청들이 `core-ledger`를 통해 원장 기록을 시도하지만, 이미 배치가 락을 잡고 있어 2초 동안 대기 후 `database is locked`로 실패.
+4. `channel-ibk`는 이를 “계정계 오류 원장 기록 실패: database is locked”로 감싸서 500 응답을 반환.
+
+즉, **배치 작업(`batch-interest`)과 실시간 이체(`core-ledger`를 통한 원장 기록"
+prune,빼기-logRecord.body,logRecord.body,BANK_F1_kftcTimeout,7,0,2,57017,"로그 상에서 보이는 장애의 “근본 원인”은,  
+**외부(또는 하위) 시스템 호출 지연으로 인한 core-ledger / channel-ibk 측의 타임아웃 발생**입니다.  
+즉, core-ledger와 channel-ibk는 정상적으로 요청을 처리하려 했으나, 의존하고 있는 다른 시스템(예: 타행/중계망/계정계 등)에서 응답이 제때 오지 않아 타임아웃이 난 것으로 보입니다.
+
+---
+
+## 1. 로그 패턴 정리
+
+### 1) 정상 트랜잭션 패턴
+
+대부분의 트랜잭션은 다음과 같은 패턴을 가집니다.
+
+- kftc-relay → core-ledger → channel-ibk 순으로 같은 traceId로 로그가 찍힘  
+  또는  
+- core-ledger → channel-ibk 두 서비스만 같은 traceId로 로그가 찍힘
+
+예:
+```json
+{""service.name"":""kftc-relay"",""traceId"":""TX_41C46140"",""attributes"":{""counterparty.account"":""TX_906AB41F""}}
+{""service.name"":""core-ledger"",""traceId"":""TX_41C46140"",""attributes"":{""account.number"":""TX_2F1DA57B"",""counterparty.account"":""TX_906AB41F""}}
+{""service.name"":""channel-ibk"",""traceId"":""TX_41C46140"",""attributes"":{""account.number"":""TX_2F1DA57B"",""counterparty.account"":""TX_906AB41F""}}
+```
+
+또는:
+```json
+{""service.name"":""core-ledger"",""traceId"":""TX_6050D91A"",""attributes"":{""account.number"":""TX_23FFCFD2""}}
+{""service.name"":""channel-ibk"",""traceId"":""TX_6050D91A"",""attributes"":{""account.number"":""TX_23FFCFD2""}}
+```
+
+이런 경우 모두 `severityText: ""INFO""`이고, 예외 메시지가 없습니다.  
+즉, core-ledger와 channel-ibk 간 연동 자체는 전반적으로 정상 동작하고 있습니다.
+
+---
+
+### 2) 장애(에러) 트랜잭션 패턴
+
+에러가 나는 트랜잭션들은 공통적으로:
+
+- core-ledger와 channel-ibk 양쪽에서 **동일한 traceId**로 ERROR 로그가 발생
+- core-ledger 쪽 attributes에 `exception.message: ""timed out""` 존재
+- channel-ibk 쪽 attributes에는 `counterparty.account`가 있고, 예외 메시지는 없음
+
+예를 들어:
+
+#### (1) TX_3D75622D
+```json
+{""service.name"":""core-ledger"",""severityText"":""ERROR"",""traceId"":""TX_3D75622D"",
+ ""attributes"":{""account.number"":""TX_CB0C8B99"",""exception.message"":""timed out""}}
+
+{""service.name"":""channel-ibk"",""severityText"":""ERROR"",""traceId"":""TX_3D75622D"",
+ ""attributes"":{""account.number"":""TX_CB0C8B99"",""counterparty.account"":""TX_AA72E044""}}
+```
+
+#### (2) TX_A7099EFD
+```json
+{""service.name"":""core-ledger"",""severityText"":""ERROR"",""traceId"":""TX_A7099EFD"",
+ ""attributes"":{""account.number"":""TX_C141D172"",""exception.message"":""timed out""}}
+
+{""service.name"":""channel-ibk"",""severityText"":""ERROR"",""traceId"":""TX_A7099EFD"",
+ ""attributes"":{""account.number"":""TX_C141D172"",""counterparty.account"":""TX_4D74214C""}}
+```
+
+#### (3) TX_8B257B58
+```json
+{""service.name"":""core-ledger"",""severityText"":""ERROR"",""traceId"":""TX_8B257B58"",
+ ""attributes"":{""account.number"":""TX_7BA424DA"",""exception.message"":""timed out""}}
+
+{""service.name"":""channel-ibk"",""severityText"":""ERROR"",""traceId"":""TX_8B257B58"",
+ ""attributes"":{""account.number"":""TX_7BA424DA"",""counterparty.account"":""TX_3CCB1E0D""}}
+```
+
+#### (4) TX_9DA0F0FC
+```json
+{""service.name"":""core-ledger"",""severityText"":""ERROR"",""traceId"":""TX_9DA0F0FC"",
+ ""attributes"":{""account.number"":""TX_7BA424DA"",""exception.message"":""timed out""}}
+
+{""service.name"":""channel-ibk"",""severityText"":""ERROR"",""traceId"":""TX_9DA0F0FC"",
+ ""attributes"":{""account.number"":""TX_7BA424DA"",""counterparty.account"":""TX_E49BF536""}}
+```
+
+#### (5) TX"
+prune,빼기-logRecord.body,logRecord.body,BANK_F2_ledgerLock,7,0,2,49023,"로그 상에서 드러나는 장애의 근본 원인은 `core-ledger` 서비스가 사용하는 DB에 대한 **동시 쓰기(또는 트랜잭션) 경합으로 인해 DB가 잠긴 상태가 지속된 것**, 즉 **“database is locked” 상태가 해소되지 못한 것**입니다.  
+좀 더 구체적으로는, SQLite 계열 또는 단일 writer 제약이 있는 DB에서 **과도한 동시 트랜잭션/락 보유**로 인해 다른 트랜잭션들이 전부 `database is locked` 에러를 맞고 실패하는 상황으로 보입니다.
+
+---
+
+## 1. 로그에서 보이는 현상 정리
+
+1. 장애 전 구간
+   - `kftc-relay` → `core-ledger` → `channel-ibk` 순으로 동일한 `traceId`를 가진 INFO 로그들이 정상적으로 찍힙니다.
+   - 예:
+     ```json
+     {""service.name"":""kftc-relay"",""severityText"":""INFO"",""traceId"":""TX_388B2FAF"", ...}
+     {""service.name"":""core-ledger"",""severityText"":""INFO"",""traceId"":""TX_388B2FAF"", ...}
+     {""service.name"":""channel-ibk"",""severityText"":""INFO"",""traceId"":""TX_388B2FAF"", ...}
+     ```
+   - 여러 계좌(account.number)와 상대 계좌(counterparty.account)에 대해 정상 처리 흐름이 반복됩니다.
+
+2. 첫 에러 발생 시점
+   - `timeUnixNano"":""1794126508485395000""` 에서 첫 ERROR:
+     ```json
+     {""service.name"":""core-ledger"",""severityText"":""ERROR"",""traceId"":""TX_B6C7703A"",
+      ""attributes"":{""account.number"":""TX_FBB8C90A"",""exception.message"":""database is locked""}}
+     ```
+   - 같은 traceId에 대해 `channel-ibk`도 ERROR를 찍지만, 메시지는 없고, 단지 이 거래가 실패했음을 의미:
+     ```json
+     {""service.name"":""channel-ibk"",""severityText"":""ERROR"",""traceId"":""TX_B6C7703A"",
+      ""attributes"":{""account.number"":""TX_FBB8C90A"",""counterparty.account"":""TX_8210717C""}}
+     ```
+
+3. 이후 패턴
+   - 이후부터 `core-ledger`에서 **동일한 에러 메시지**가 다양한 계좌에 대해 반복적으로 발생:
+     - `TX_E907AA5C`, `TX_150D70A7`, `TX_C57DD734`, `TX_FAD64777`, `TX_84366300`, `TX_78F28803`, `TX_4D4D27ED`, `TX_13C66131`, `TX_E4D470FC`, `TX_FEA7B0AF`, `TX_181DAB53`, `TX_7926E78C`, `TX_EAD063E8`, `TX_3D16AC75`, `TX_7FD01CCD`, `TX_51935949`, `TX_29799A79`, `TX_32039983`, `TX_77AB3ED6`, `TX_DB31737E`, `TX_41EB3E5C`, `TX_5E00C46F`, `TX_66E020D1`, `TX_CB3EADA6`, `TX_B32161F8`, `TX_9C3E772B`, `TX_48CE459D` …
+   - 모두 공통적으로:
+     ```json
+     ""exception.message"":""database is locked""
+     ```
+   - 에러가 나는 트랜잭션과 동시에, 다른 트랜잭션들은 여전히 INFO로 성공하는 로그도 섞여 있음:
+     ```json
+     {""service.name"":""core-ledger"",""severityText"":""ERROR"", ... ""exception.message"":""database is locked""}
+     {""service.name"":""core-ledger"",""severityText"":""INFO"", ...}
+     ```
+   - 즉, DB가 완전히 죽은 것은 아니고, **일부 트랜잭션이 락 경합에 걸려 실패**하는 상태가 일정 시간 지속.
+
+4. 에러의 범위
+   - 에러가 나는 계좌(account.number)는 매우 다양하며, 특정 계좌에 국한되지 않습니다.
+   - `kftc-relay`, `channel-ibk`, `batch-interest` 등 다른 서비스에서는 DB 관련 에러 메시지가 없고, 문제는 **항상 `core-ledger`에서 시작**됩니다.
+   - `channel-ibk`의 ERROR는 모두 `core-ledger`의 실패를 전파받은 결과(같은 traceId, 같은 시각대)로 보입니다.
+
+---
+
+"
+prune,빼기-logRecord.attributes.exception.message,logRecord.attributes.exception.message,BANK_F1_kftcTimeout,6,0,0,56825,"로그 패턴을 보면, 장애의 근본 원인은 **특정 거래(송금) 요청 자체가 비즈니스 규칙 위반 상태로 들어온 것(예: 잔액 부족, 한도 초과, 거래 불가 계좌 등)으로 인한 “정상적인 비즈니스 에러”**로 판단됩니다.  
+즉, 시스템/인프라 장애라기보다는 **입력된 거래 조건이 유효하지 않아 core-ledger가 에러를 반환한 것**입니다.
+
+---
+
+## 1. 에러가 나는 구간만 따로 보면
+
+ERROR 로그만 추려보면 다음과 같습니다.
+
+- `TX_3D75622D`
+  - `core-ledger` ERROR: `account.number"":""TX_CB0C8B99""`
+  - 직후 `channel-ibk` ERROR: `account.number"":""TX_CB0C8B99"",""counterparty.account"":""TX_AA72E044""`
+- `TX_A7099EFD`
+  - `core-ledger` ERROR: `account.number"":""TX_C141D172""`
+  - 직후 `channel-ibk` ERROR: `account.number"":""TX_C141D172"",""counterparty.account"":""TX_4D74214C""`
+- `TX_8B257B58`
+  - `core-ledger` ERROR: `account.number"":""TX_7BA424DA""`
+  - 직후 `channel-ibk` ERROR: `account.number"":""TX_7BA424DA"",""counterparty.account"":""TX_3CCB1E0D""`
+- `TX_9DA0F0FC`
+  - `core-ledger` ERROR: `account.number"":""TX_7BA424DA""`
+  - 직후 `channel-ibk` ERROR: `account.number"":""TX_7BA424DA"",""counterparty.account"":""TX_E49BF536""`
+- `TX_149294A9`
+  - `core-ledger` ERROR: `account.number"":""TX_22DC013F""`
+  - 직후 `channel-ibk` ERROR: `account.number"":""TX_22DC013F"",""counterparty.account"":""TX_E49BF536""`
+- `TX_3BDB3E11`
+  - `core-ledger` ERROR: `account.number"":""TX_9059F9F4""`
+  - 직후 `channel-ibk` ERROR: `account.number"":""TX_9059F9F4"",""counterparty.account"":""TX_9C3DBBD7""`
+
+공통점:
+
+- 모든 ERROR는 **항상 core-ledger에서 먼저 발생**하고,  
+  바로 이어서 **같은 traceId로 channel-ibk에서도 ERROR**가 찍힙니다.
+- `kftc-relay` 쪽에는 이 traceId들에 대한 ERROR 로그가 전혀 없습니다.
+- 같은 계좌들에 대해, 에러 직전/직후에 **정상 INFO 거래들이 계속 성공**하고 있습니다.
+
+---
+
+## 2. 시스템 장애가 아니라는 근거
+
+1. **서비스 전반은 계속 정상 동작**
+   - ERROR가 발생한 시점 전후로도  
+     - `core-ledger`와 `channel-ibk`는 수많은 다른 traceId에 대해 INFO 로그를 정상 출력
+     - 동일 계좌에 대해서도 다른 거래는 정상 처리됨  
+       예:
+       - `TX_C141D172` 계좌
+         - 에러: `TX_A7099EFD` (ERROR)
+         - 직후 정상: `TX_6E03F097`, `TX_AD35B764`, `TX_D0D75BCA`, `TX_D450CA0D` 등 INFO 다수
+       - `TX_7BA424DA` 계좌
+         - 에러: `TX_8B257B58`, `TX_9DA0F0FC`
+         - 직후 정상: `TX_9972F25A`, `TX_38DE0FB4` 등 INFO 다수
+   - 만약 DB 장애, 네트워크 장애, core-ledger 프로세스 장애였다면  
+     특정 시점 이후로 관련 계좌/서비스 전체가 실패하거나,  
+     에러가 폭발적으로 늘어나는 패턴이 나와야 하는데,  
+     여기서는 **소수의 개별 거래만 실패**합니다.
+
+2. **에러가 특정 traceId/계좌/상대계좌 조합에만 국한**
+   - 예를 들어 `TX_22DC013F` 계좌는
+     - 에러: `TX_149294A9` (counterparty: `TX_E49BF536`)
+     - 정상: `TX_1008C542` (단순 조회/입금/출금 등으로 보이는 INFO"
+prune,빼기-logRecord.attributes.exception.message,logRecord.attributes.exception.message,BANK_F2_ledgerLock,6,0,0,47875,"로그만 놓고 보면, 이 장애의 근본 원인은 **외부(또는 상위) 시스템에서 잘못된/중복된 거래 요청이 대량으로 유입되었고, 그 결과 core-ledger의 계좌 상태(잔액/락 상태)가 이미 선행 거래들에 의해 변경된 뒤에 다시 동일/연관 거래가 들어오면서 대량의 거래 실패가 발생한 것**으로 보는 것이 가장 타당합니다.  
+즉, **내부 시스템(core-ledger, channel-ibk, kftc-relay)의 장애라기보다는, 트랜잭션 시퀀스/중복 제어가 되지 않은 외부 요청 패턴이 근본 원인**으로 보입니다.
+
+아래는 그렇게 판단한 근거입니다.
+
+---
+
+## 1. 장애 구간 전후 패턴
+
+1) 초반 구간 (INFO 위주, 정상 흐름)
+
+- `1794126491xxx` ~ `1794126506xxx` 구간까지는  
+  - `kftc-relay` → `core-ledger` → `channel-ibk`  
+  - 또는 `core-ledger` → `channel-ibk`  
+  순으로 동일 `traceId`에 대해 INFO 로그가 2~3개씩 짝을 이루며 찍힙니다.
+- 예:
+  - `TX_388B2FAF`, `TX_6877C023`, `TX_4A44F0F0`, `TX_03BC024E`, `TX_5CB64FB0` 등  
+    모두 `kftc-relay` → `core-ledger` → `channel-ibk` 순으로 정상 처리.
+- 이 시점까지는 ERROR가 거의 없고, 서비스 간 호출 플로우가 일정합니다.
+
+2) 장애 시작 시점
+
+- 첫 ERROR:
+  - `1794126508485395000`  
+    - `core-ledger` ERROR, `traceId: TX_B6C7703A`, `account.number: TX_FBB8C90A`
+  - 직후 `channel-ibk` ERROR, 같은 `traceId`, `counterparty.account: TX_8210717C`
+- 이후 짧은 시간(수백 ms~수 초) 동안 ERROR가 폭발적으로 증가:
+  - `TX_E907AA5C`, `TX_150D70A7`, `TX_C57DD734`, `TX_FAD64777`, `TX_84366300`, `TX_78F28803`, `TX_4D4D27ED`, `TX_13C66131`, `TX_E4D470FC`, `TX_FEA7B0AF`, `TX_181DAB53`, …  
+  - 모두 `core-ledger`와 `channel-ibk`가 같은 `traceId`로 동시에 ERROR를 찍습니다.
+
+3) 장애 이후에도 일부 계좌는 정상 거래가 계속됨
+
+- 예:
+  - `TX_4EDD50CF` (F0BC68B8), `TX_A483A48C` (2012033F), `TX_81F4FBEB` (148CA3BC) 등은 INFO로 정상 처리.
+  - 즉, 시스템 전체 다운이 아니라 **특정 거래/계좌 조합에서만 오류가 집중**됩니다.
+
+---
+
+## 2. 오류가 나는 거래들의 공통점
+
+### 2-1. 동일 계좌에 대해 “정상 거래 → 곧바로 ERROR 거래” 패턴
+
+여러 계좌에서 다음과 같은 패턴이 반복됩니다.
+
+예시 1: 계좌 `TX_7B81F25B`
+
+- 정상:
+  - `1794126504270978000` INFO `TX_6BA29BE3` (7B81F25B ↔ 0268F370)
+  - `1794126511187504000` INFO `TX_EAF106D8` (7B81F25B)
+- 직후 오류:
+  - `1794126511783263000` ERROR `TX_84366300` (7B81F25B ↔ 141EBB4E)
+
+예시 2: 계좌 `TX_148CA3BC`
+
+- 정상:
+  - `1794126512791974000` INFO `TX_81F4FBEB` (148CA3BC)
+- 직후 오류들:
+  - `1794126513791001000` ERROR `TX_4D4D27ED` (148CA3BC ↔ 2888B8FB)
+  - `1794126518493775000` ERROR `TX_7926E78C` (148CA3BC ↔ 974308B5)
+  -"
+validate,알고리즘 최종,,BANK_F3_badDeploy,7,0,2,43079,"로그 상에서 보이는 장애의 근본 원인은:
+
+**`channel-ibk` 서비스가 외부(또는 하위) 시스템에 TCP 연결을 맺지 못해, 대량의 `[Errno 61] Connection refused`가 발생한 것**입니다.  
+즉, `channel-ibk`가 접속하려는 대상 서버(예: 은행 채널 게이트웨이, 내부 TCP 서버 등)가 **포트를 열고 있지 않거나, 프로세스가 죽어 있거나, 방화벽/네트워크 설정으로 인해 연결이 거부되는 상태**가 근본 원인입니다.
+
+---
+
+### 그렇게 판단한 근거
+
+1. **에러 패턴이 한 서비스에만 집중**
+   - `service.name`이 `channel-ibk`인 로그에서만 `severityText: ""ERROR""`와 `exception.message`가 등장합니다.
+   - `core-ledger`, `kftc-relay`는 같은 시점에도 계속 `INFO`만 찍히고 있고, 에러가 없습니다.
+   - 따라서 장애는 전체 시스템이 아니라 **`channel-ibk`와 그가 호출하는 외부 엔드포인트 사이**에 국한됩니다.
+
+2. **에러 메시지의 내용이 명확한 네트워크 레벨 오류**
+   - 모든 에러 로그에 공통적으로:
+     ```text
+     ""exception.message"":""[Errno 61] Connection refused""
+     ```
+   - 이는 OS 레벨에서 TCP connect 호출 시 **상대방이 RST를 보내거나, 해당 포트에서 리스닝 중인 프로세스가 없어서 커널이 연결을 거부할 때** 나는 전형적인 에러입니다.
+   - 애플리케이션 로직 오류(잔액 부족, 유효성 실패 등)가 아니라 **소켓 연결 자체가 성립하지 못하는 상태**입니다.
+
+3. **장애 발생 전까지는 정상적으로 처리되던 흐름**
+   - 초반부 로그를 보면, 각 트랜잭션(traceId 기준)마다:
+     - `kftc-relay` → `core-ledger` → `channel-ibk` 순으로 `INFO` 로그가 정상적으로 찍힙니다.
+     - 예:
+       ```json
+       {""service.name"":""kftc-relay"",""traceId"":""TX_14BFB58D"", ...}
+       {""service.name"":""core-ledger"",""traceId"":""TX_14BFB58D"", ...}
+       {""service.name"":""channel-ibk"",""traceId"":""TX_14BFB58D"", ...}
+       ```
+   - 이는 평소에는 `channel-ibk`가 정상적으로 외부와 통신하고 있었음을 의미합니다.
+
+4. **특정 시점 이후, `channel-ibk`에서만 대량의 Connection refused**
+   - `timeUnixNano` 기준으로 1794126546401226000 근처부터:
+     ```json
+     {""service.name"":""channel-ibk"",""severityText"":""ERROR"",""exception.message"":""[Errno 61] Connection refused""}
+     ```
+     가 연속적으로 발생합니다.
+   - 계좌번호(`account.number`)와 상대 계좌(`counterparty.account`)는 다양하지만, **모든 실패의 공통 원인은 Connection refused**입니다.
+   - 이는 비즈니스 데이터(계좌, 거래 내용)와 무관하게, **네트워크/서비스 가용성 문제**임을 보여줍니다.
+
+5. **동일 서비스 내에서 INFO와 ERROR가 섞여 있는 점**
+   - 장애 구간 중에도 `channel-ibk`에서 간헐적으로 `INFO` 로그가 찍힙니다:
+     ```json
+     {""service.name"":""channel-ibk"",""severityText"":""INFO"",""traceId"":""TX_CFEB1A5F"", ...}
+     {""service.name"":""channel-ibk"",""severityText"":""INFO"",""traceId"":""TX_8860D2B6"", ...}
+     ...
+     ```
+   - 이는 `channel-ibk` 프로세스 자체는 살아 있고 일부 내부 처리(예: 큐 소비, 내부 상태 조회)는 정상 수행되지만, **외부로 나가는 특정 연결 시도만 실패**하고 있음을 시사합니다.
+   - 즉, `channel-ibk` 애플리케이션이 죽은 것이 아니라, **그가 접속해야 하는 외부 채널(또는 특정 포트)이 죽었거나 막힌 상태**입니다.
+
+6. **다양한 트랜잭션/계좌에 대해 동일 증상 → 특정 계좌/거래 문제가 아님**
+   - 에러 로그의 `account.number`, `counterparty.account` 값이 계속 바뀌지만, 결과는 항상 Connection refused입니다.
+   -"
+validate,알고리즘 최종,,BANK_F4_kftcTimeoutDebug,7,0,0,47499,"로그만 놓고 보면, 이 장애의 근본 원인은 **`core-ledger` 서비스 내부에서 특정 요청들이 처리 시간 초과(`timed out`)가 발생한 것**입니다.  
+즉, `channel-ibk`나 `kftc-relay`가 아니라, **원장(core-ledger) 쪽 응답 지연/미응답**이 직접적인 장애 원인입니다.
+
+---
+
+## 1. 어떤 현상이 발생했는지
+
+에러 구간을 시간 순으로 보면:
+
+- `1794126591197457000`  
+  - `core-ledger` ERROR, `traceId"":""TX_5F971334""`, `exception.message"":""timed out""`
+- `1794126591412261000`  
+  - `core-ledger` ERROR, `TX_1A29DBBB`, `""timed out""`
+- `1794126592316986000`  
+  - `core-ledger` ERROR, `TX_66384D76`, `""timed out""`
+- `1794126597783192000`  
+  - `core-ledger` ERROR, `TX_0C888A3E`, `""timed out""`
+- `1794126600069359000`  
+  - `core-ledger` ERROR, `TX_1618E518`, `""timed out""`
+- `1794126600071288000`  
+  - `core-ledger` ERROR, `TX_70C16087`, `""timed out""`
+- `1794126600492307000`  
+  - `core-ledger` ERROR, `TX_2A1BCCD3`, `""timed out""`
+- `1794126607052415000`  
+  - `core-ledger` ERROR, `TX_A605BEA2`, `""timed out""`
+- `1794126608411395000`  
+  - `core-ledger` ERROR, `TX_6AFEE85C`, `""timed out""`
+
+공통점:
+
+- 모두 `service.name"":""core-ledger""`에서 발생
+- `severityText"":""ERROR""`
+- `attributes`에 `exception.message"":""timed out""` 존재
+- 각 에러와 동일한 `traceId`로 `channel-ibk` 로그도 ERROR로 찍히지만,  
+  `channel-ibk` 쪽에는 `exception.message`가 없고, 단순히 같은 트랜잭션을 따라가며 실패를 기록하는 형태입니다.
+
+즉, **실제 예외는 core-ledger에서 발생했고, channel-ibk는 그 실패를 전파/로깅만 하고 있습니다.**
+
+---
+
+## 2. 왜 core-ledger가 근본 원인이라고 볼 수 있는지
+
+1. **에러의 최초 발생 지점이 항상 core-ledger**
+
+   예를 들어 `TX_5F971334` 트랜잭션:
+
+   - `core-ledger`  
+     ```json
+     {""service.name"":""core-ledger"",""severityText"":""ERROR"",""traceId"":""TX_5F971334"",""attributes"":{""account.number"":""TX_DCFCA7FB"",""exception.message"":""timed out""}}
+     ```
+   - 직후 `channel-ibk`  
+     ```json
+     {""service.name"":""channel-ibk"",""severityText"":""ERROR"",""traceId"":""TX_5F971334"",""attributes"":{""account.number"":""TX_DCFCA7FB"",""counterparty.account"":""TX_6FA2EEA7""}}
+     ```
+
+   에러 메시지를 가진 쪽은 core-ledger이고, channel-ibk는 단순히 같은 traceId로 에러 상태를 기록합니다.  
+   다른 에러 트랜잭션들도 모두 동일한 패턴입니다.
+
+2. **kftc-relay 쪽에는 에러가 없음**
+
+   - `kftc-relay` 로그는 전 구간에서 `severityText"":""INFO""`만 존재
+   - 즉, 대외 연계(금결원) 구간에서는 오류/타임아웃이 관측되지 않음
+   - 외부망/네트워크보다는 **내부 원장 처리 계층(core-ledger)** 에서 병목 또는 장애가 발생했다고 보는 것이 자연스럽습니다.
+
+3. **동일 시점에 다수 계좌/트랜잭션에서 동시 타임아웃**
+
+   타임아웃이 난 계좌/카운터파티:
+
+   - `TX_DCFCA7FB`, `TX_D641A3D8`, `TX_B63BC1C0`, `TX_9B710F37`,  
+     `TX_CD7FC840`, `TX_B4A5808C`, `TX_853963DE`, `TX_ADA6C878`, `TX_35"
+validate,기준,,BANK_F3_badDeploy,6,0,0,39803,"이 로그만 놓고 보면, 장애의 근본 원인은 **`channel-ibk` 서비스 내부에서 발생한 대량 오류(내부 장애)**로 보는 것이 가장 타당합니다.  
+외부 연동(`kftc-relay`)이나 코어 시스템(`core-ledger`)이 원인은 아닙니다.
+
+---
+
+## 1. 타임라인으로 본 현상 정리
+
+### 1) 장애 전 정상 구간
+
+- 세 서비스가 모두 정상적으로 동작합니다.
+  - `kftc-relay` → `core-ledger` → `channel-ibk` 순으로 같은 `traceId`를 공유하며 INFO 로그가 찍힙니다.
+  - 예:
+    - `TX_14BFB58D`  
+      - 1794126531422728000: `kftc-relay` INFO  
+      - 1794126531423931000: `core-ledger` INFO  
+      - 1794126531424568000: `channel-ibk` INFO
+    - `TX_E3F0C818`, `TX_C005A033`, `TX_15FDD05F`, `TX_588FDCA8`, `TX_6313B309`, `TX_314AFF99`, `TX_E121BF05`, `TX_6D100BF6`, `TX_22D625DF`, `TX_E93C7A96` 등 동일 패턴
+
+- `core-ledger` 단독 INFO, `channel-ibk` 단독 INFO도 다수 존재하며, 전반적으로 오류가 없습니다.
+
+### 2) 장애 발생 시점
+
+- 1794126546400761000: `core-ledger` INFO (특별한 traceId/속성 없음)
+- 바로 직후
+  - 1794126546401226000: `channel-ibk` ERROR, traceId `TX_3C994D3F`
+
+이 시점을 기점으로 `channel-ibk`에서 ERROR 로그가 폭발적으로 증가합니다.
+
+이후 수백 ms ~ 수 초 동안:
+
+- `channel-ibk`에서만 ERROR 로그가 연속적으로 발생
+- `core-ledger`와 `kftc-relay`에서는 **추가 ERROR가 전혀 없음**
+- 중간중간 `channel-ibk`의 INFO 로그도 섞여 있어, 완전 다운은 아니고 **부분 장애/일부 요청 실패 상태**로 보입니다.
+
+---
+
+## 2. 서비스별 관점에서 본 원인 추론
+
+### 1) `kftc-relay`
+
+- 장애 전후로 모두 INFO만 존재
+- 장애 발생 시점(1794126546400ms 근처) 이후에는 `kftc-relay` 로그가 거의 보이지 않지만,
+  - 그 이전까지는 정상적으로 `core-ledger`, `channel-ibk`와 동일 traceId로 연동됨
+- `kftc-relay`에서 ERROR가 없고, 장애 직전까지도 정상 응답을 주고 있었으므로  
+  → **장애의 직접 원인으로 보기 어렵습니다.**
+
+### 2) `core-ledger`
+
+- 전체 로그에서 severityText가 모두 INFO
+- 장애 발생 직전 마지막 로그:
+  - 1794126546400761000: `core-ledger` INFO (traceId 없음)
+- 장애 이후에도 간헐적으로 INFO 로그가 찍히며, 별도의 ERROR는 없음
+- 즉, `core-ledger`는 **장애 구간에도 정상 동작**하고 있는 것으로 보입니다.
+
+→ `core-ledger`가 다운되었거나 오류 응답을 대량으로 반환했다면,  
+- `core-ledger` 쪽에도 ERROR가 찍히거나,
+- `kftc-relay`와의 연동 traceId에서 이상 패턴이 보여야 하는데 그런 흔적이 없습니다.
+
+따라서 **core-ledger는 원인이 아니라, 장애 시점에도 정상인 상태**로 보는 것이 합리적입니다.
+
+### 3) `channel-ibk`
+
+- 장애 전:
+  - `kftc-relay`/`core-ledger`와 함께 동일 traceId로 INFO 로그를 남기며 정상 처리
+- 장애 발생 직후:
+  - 1794126546401226000: 첫 ERROR (`TX_3C994D3F`)
+  - 이후 수십 개의 서로 다른 traceId에 대해 ERROR가 연속 발생
+  - 예:
+    - `TX_6CC7E11B`, `TX_E5EE0A29`, `TX_5792D56F`, `TX_05FB44D3`, `TX_E893ED7D`, … (이하 다수)
+- 특징:
+  - ERROR 로그의 `attributes`"
+validate,기준,,BANK_F4_kftcTimeoutDebug,6,0,0,47211,"이 로그만 놓고 보면, 장애의 근본 원인은 **특정 계좌(또는 계좌 그룹)에 대한 거래 처리 실패**이며, 그 실패가 `core-ledger`에서 먼저 발생하고, 이를 그대로 `channel-ibk`가 따라가면서 에러로 기록된 것으로 보입니다.  
+즉, **채널/중계(kftc-relay, channel-ibk)가 아니라 원장(core-ledger) 쪽 비즈니스/데이터 상태 문제**가 근본 원인입니다.
+
+---
+
+## 1. 에러 패턴 정리
+
+로그에서 `severityText"":""ERROR""` 인 부분만 추리면:
+
+1. `1794126591197457000`  
+   - core-ledger: `ERROR`, traceId: `TX_5F971334`, `account.number"":""TX_DCFCA7FB`  
+   - channel-ibk: `ERROR`, traceId: `TX_5F971334`, `account.number"":""TX_DCFCA7FB"",""counterparty.account"":""TX_6FA2EEA7""`
+
+2. `1794126591412261000`  
+   - core-ledger: `ERROR`, traceId: `TX_1A29DBBB`, `account.number"":""TX_D641A3D8`  
+   - channel-ibk: `ERROR`, traceId: `TX_1A29DBBB`, `account.number"":""TX_D641A3D8"",""counterparty.account"":""TX_11D7E24B""`
+
+3. `1794126592316986000`  
+   - core-ledger: `ERROR`, traceId: `TX_66384D76`, `account.number"":""TX_B63BC1C0`  
+   - channel-ibk: `ERROR`, traceId: `TX_66384D76`, `account.number"":""TX_B63BC1C0"",""counterparty.account"":""TX_AC352D8C""`
+
+4. `1794126597783192000`  
+   - core-ledger: `ERROR`, traceId: `TX_0C888A3E`, `account.number"":""TX_9B710F37`  
+   - channel-ibk: `ERROR`, traceId: `TX_0C888A3E`, `account.number"":""TX_9B710F37"",""counterparty.account"":""TX_749B2444""`
+
+5. `1794126600069359000` / `1794126600071288000`  
+   - core-ledger: `ERROR`, traceId: `TX_1618E518`, `account.number"":""TX_CD7FC840`  
+   - core-ledger: `ERROR`, traceId: `TX_70C16087`, `account.number"":""TX_B4A5808C`  
+   - channel-ibk: `ERROR`, traceId: `TX_1618E518`, `account.number"":""TX_CD7FC840"",""counterparty.account"":""TX_4555735E""`  
+   - channel-ibk: `ERROR`, traceId: `TX_70C16087`, `account.number"":""TX_B4A5808C"",""counterparty.account"":""TX_EA1E05C0""`
+
+6. `1794126600492307000`  
+   - core-ledger: `ERROR`, traceId: `TX_2A1BCCD3`, `account.number"":""TX_853963DE`  
+   - channel-ibk: `ERROR`, traceId: `TX_2A1BCCD3`, `account.number"":""TX_853963DE"",""counterparty.account"":""TX_CC19086C""`
+
+7. `1794126607052415000`  
+   - core-ledger: `ERROR`, traceId: `TX_A605BEA2`, `account.number"":""TX_ADA6C878`  
+   - channel-ibk: `ERROR`, traceId: `TX_A605BEA2`, `account.number"":""TX_ADA6C878"",""counterparty.account"":""TX_4555735E""`
+
+8. `1794126608411395000`  
+   - core-ledger: `ERROR`, traceId: `TX_6AFEE85C`, `account.number"":""TX_35A67C8F`  
+   - channel-ibk: `ERROR`, traceId: `TX_6AFEE85C`, `account.number"":""TX_35A67C8F"",""counterparty.account"":""TX_1F5D6F3B""`
+
+공통점:
+
+- 모든 에러는 **core-ledger에서 먼저 ERROR** 로 찍히고,  
+  거의 같은 타임스탬프에 **channel-ibk에서도 동일 traceId로 ERROR** 가 찍힙니다.
+- `kftc-relay` 쪽에는 **ERROR 로그"
+validate,그대로,,BANK_F3_badDeploy,42,708,2,428230,"장애의 근본 원인은 **채널 서버가 여전히 `127.0.0.1:9100`(기존 코어 계정계 포트)로 호출하고 있는데, 코어 계정계 프로세스가 중간에 포트를 `9101`로 바꾸어 재기동되면서, 9100 포트에서 더 이상 리스닝하지 않게 된 것**입니다.  
+즉, **코어 계정계 재기동 시 포트 변경 + 채널 측 설정 미반영(혹은 동적 디스커버리 부재)**가 근본 원인입니다.
+
+---
+
+### 로그에서 보이는 흐름
+
+1. 초반부:
+   - `core-ledger`가 다음과 같이 정상 기동:
+     ```json
+     ""service.name"":""core-ledger"",
+     ""body"":""계정계 시작 port=9100 ...""
+     ```
+   - 그 이후 `/api/transfer`, `/api/inquiry` 등은 모두 정상적으로 `core-ledger`와 통신하고 200 응답을 반환합니다.
+
+2. 장애 발생 직전:
+   - 아래와 같이 **새로운 코어 계정계 인스턴스가 다른 포트(9101)로 기동**됩니다.
+     ```json
+     ""service.name"":""core-ledger"",
+     ""body"":""계정계 시작 port=9101 ..."",
+     ""attributes"":{""server.port"":9101}
+     ```
+   - 이 시점 이후부터 `channel-ibk`의 모든 코어 호출이 실패하기 시작합니다.
+
+3. 장애 증상:
+   - `channel-ibk`에서 반복적으로 다음과 같은 에러 로그가 쏟아집니다.
+     ```json
+     ""body"":""/api/transfer 실패 503: 계정계 호출 실패 ConnectionRefusedError: [Errno 61] Connection refused"",
+     ""peer.service"":""core-ledger"",
+     ""server.address"":""127.0.0.1:9100"",
+     ""exception.type"":""ConnectionRefusedError"",
+     ""exception.message"":""[Errno 61] Connection refused""
+     ```
+   - `/api/inquiry`도 동일하게 503 + `ConnectionRefusedError`이며, 모두 `server.address"":""127.0.0.1:9100""`로 향하고 있습니다.
+   - 스택트레이스 상에서도 `urllib.request.urlopen(""http://127.0.0.1:9100/..."")` 호출이 `ConnectionRefusedError`로 실패하는 것이 반복됩니다.
+
+4. 중요한 포인트:
+   - **코어는 9101에서 떠 있음**:
+     ```json
+     ""body"":""계정계 시작 port=9101 ...""
+     ```
+   - **채널은 계속 9100으로 호출**:
+     ```json
+     ""server.address"":""127.0.0.1:9100""
+     ```
+   - `ConnectionRefusedError`는 네트워크 단절이 아니라, **해당 포트에 리스닝 중인 프로세스가 없을 때** 발생하는 전형적인 에러입니다.
+
+---
+
+### 왜 이것이 근본 원인이라고 볼 수 있는가?
+
+1. **시간 상의 인과관계**
+   - 9101 포트로 코어가 재기동된 로그 직후부터, 채널의 모든 코어 호출이 `ConnectionRefusedError`로 바뀝니다.
+   - 그 전까지는 같은 채널 코드/네트워크 환경에서 정상 응답(200)을 받고 있었습니다.
+
+2. **주소/포트 불일치**
+   - 채널 로그의 `server.address`는 끝까지 `127.0.0.1:9100`으로 고정.
+   - 코어 로그의 `server.port`는 9101.
+   - 즉, **채널이 바라보는 주소와 실제 코어가 떠 있는 주소가 다름**.
+
+3. **에러 유형**
+   - `ConnectionRefusedError: [Errno 61] Connection refused`는
+     - DNS 문제나 라우팅 문제라면 `timeout`이나 `Name or service not known` 류가 나올 가능성이 더 큼.
+     - 여기서는 로컬호스트(127.0.0.1)이고, 포트만 다르므로 “리스너 없음” 상황이 가장 자연스럽습니다.
+
+4. **다른 서비스(kftc-relay 등)는 별 문제 없음**
+   - 장애 구간에서도 `kftc-relay` 관련 로그는 더 이상 새 이체가 보이지 않거나, 문제의 직접 원인으로 보이는 에러는 없습니다.
+   - 장애는 **채널 → 코어** 경로에만 집중되어 있습니다.
+
+---
+
+### 정리
+
+- **직접 원인**: 채널 서버가 계속 `"
+validate,그대로,,BANK_F4_kftcTimeoutDebug,43,774,2,181696,"장애의 근본 원인은 **core-ledger → kftc-relay(대외기관 중계 서버, 127.0.0.1:9200) 구간에서의 네트워크/서비스 응답 지연으로 인한 타임아웃**입니다.  
+즉, 계정계(core-ledger)가 대외기관 중계(kftc-relay)에 보낸 HTTP 요청에 대해, 설정된 3초(timeout=3000ms) 안에 응답이 오지 않아 `TimeoutError`가 발생했고, 그 결과 타행이체가 실패(504)한 것입니다.
+
+---
+
+### 그렇게 판단한 근거
+
+1. **에러가 발생한 지점과 예외 내용**
+
+   예: txn.id=19 로그
+   - `service.name: core-ledger`
+   - `severityText: ""ERROR""`
+   - 메시지:
+     - `타행이체 실패: 대외기관 응답 없음 (가람은행) 3003ms (timeout=3000ms), 출금 취소 txn=19`
+   - attributes:
+     - `peer.service: ""kftc-relay""`
+     - `server.address: ""127.0.0.1:9200""`
+     - `interbank.wait_ms: 3003`
+     - `exception.type: ""TimeoutError""`
+     - `exception.message: ""timed out""`
+
+   스택트레이스에서도 공통적으로:
+   - `urllib.request.urlopen(req, timeout=timeout)`
+   - `socket.py ... TimeoutError: timed out`
+
+   → core-ledger가 `KFTC_URL + ""/interbank""`로 HTTP 요청을 보냈으나, 소켓 read에서 응답을 못 받고 타임아웃이 난 전형적인 네트워크/상대 서비스 지연 패턴입니다.
+
+2. **동일 패턴의 에러가 여러 타행이체에서 반복**
+
+   아래와 같이 여러 txn에서 같은 형태의 에러가 연속적으로 발생합니다.
+
+   - txn.id=19, 20, 21, 24, 26, 27, 28, 36, 37 …
+   - 모두 공통:
+     - `txn.type: ""타행""`
+     - `peer.service: ""kftc-relay""`
+     - `server.address: ""127.0.0.1:9200""`
+     - `interbank.wait_ms` ≒ 3000ms
+     - `exception.type: TimeoutError`
+
+   채널 로그에서도 동일 트레이스 ID로:
+   - `""/api/transfer 실패 504: 계정계 오류 대외기관 응답 없음""`
+   - `error.type: ""대외기관 응답 없음""`
+
+   → 채널 → core-ledger까지는 정상이지만, core-ledger가 대외기관(중계) 호출에서 타임아웃이 나서 504로 전파된 구조입니다.
+
+3. **같은 구간에서 직전까지는 정상 응답이 있었음**
+
+   에러 직전까지는 같은 kftc-relay를 통한 타행이체가 정상 처리됩니다.
+
+   예:
+   - `traceId: 5b5016ea...`  
+     - kftc-relay: `""타행이체 중계 완료 ... code=0000""`, `duration_ms: 207`
+     - core-ledger: `""타행이체 완료""`, `interbank.wait_ms: 211`
+     - channel-ibk: `""/api/transfer 성공 200""`
+
+   이후 어느 시점부터는 같은 127.0.0.1:9200에 대해 **응답이 전혀 오지 않고 3초 만에 타임아웃**이 반복됩니다.
+
+   → 네트워크 경로 자체가 처음부터 막힌 것이 아니라, **중계 서버(kftc-relay) 측의 일시적인 정지/과부하/응답 지연**이 발생했다고 보는 것이 자연스럽습니다.
+
+4. **다른 기능(당행이체, 조회, 로그인)은 전부 정상**
+
+   에러가 나는 것은 모두 `txn.type: ""타행""`인 경우뿐이고,
+   - `당행이체 완료` 로그는 계속 정상적으로 찍히며 duration_ms도 0~수 ms 수준
+   - `잔액 조회`, `본인확인(로그인)`도 전부 200 OK, 에러 없음
+
+   → core-ledger 자체의 DB나 내부 로직, 채널 서버에는 문제가 없고, **“타행이체 시에만 호출하는 외부 연동 구간”**에서만 장애가 발생합니다.  
+   그 외부 연동 구간이 바로 `peer.service: kftc-relay`, `server.address: 127.0.0.1:"

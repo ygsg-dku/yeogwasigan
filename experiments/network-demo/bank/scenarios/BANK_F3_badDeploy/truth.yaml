@@ -1,0 +1,6 @@
+# 정답지 — AI 에는 보내지 않는다. 필드 선택 알고리즘의 판정·단서 기준 (make_scenarios.py 가 만듦)
+title: '전체 거래 실패 (계정계 포트 설정 오류 배포)'
+root_cause:
+  summary: '계정계가 설정 오류로 9101 포트로 재배포되어 9100 으로 부르는 채널계가 연결 거부를 받았다. 조회·이체 모두 실패'
+# 1단계 단서 키워드. 한 줄 · 큰따옴표 목록으로 적는다
+cause_keywords: ["연결 거부", "포트", "배포", "9101", "Connection refused", "ConnectionRefusedError", "port"]

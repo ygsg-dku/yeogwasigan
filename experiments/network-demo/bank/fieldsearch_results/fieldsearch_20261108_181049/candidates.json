@@ -1,0 +1,554 @@
+{
+  "dir": "experiments/network-demo/bank/scenarios",
+  "select": [
+    "BANK_F1_kftcTimeout",
+    "BANK_F2_ledgerLock"
+  ],
+  "validate": [
+    "BANK_F3_badDeploy",
+    "BANK_F4_kftcTimeoutDebug"
+  ],
+  "context": [
+    "resource.service.name",
+    "logRecord.timeUnixNano",
+    "logRecord.severityText"
+  ],
+  "hand": [],
+  "candidates": [
+    {
+      "field": "logRecord.body",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.error.type",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.exception.stacktrace",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.exception.type",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "resource.service.name",
+      "verdict": "담기(문맥)",
+      "clue": 1,
+      "novel": 1,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.exception.message",
+      "verdict": "담기",
+      "clue": 1,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.http.response.status_code",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.interbank.relay_id",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 1.0
+    },
+    {
+      "field": "logRecord.attributes.interbank.wait_ms",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.severityText",
+      "verdict": "담기(문맥)",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.attributes.db.operation",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 1,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "resource.service.version",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 1,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.timeUnixNano",
+      "verdict": "담기(문맥)",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0
+    },
+    {
+      "field": "logRecord.traceId",
+      "verdict": "토큰화",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.91
+    },
+    {
+      "field": "logRecord.attributes.counterparty.account",
+      "verdict": "토큰화",
+      "clue": 0,
+      "novel": 0,
+      "leak": 173,
+      "link": 0.73
+    },
+    {
+      "field": "logRecord.attributes.account.number",
+      "verdict": "토큰화",
+      "clue": 0,
+      "novel": 0,
+      "leak": 475,
+      "link": 1.0
+    }
+  ],
+  "fields": [
+    {
+      "field": "logRecord.body",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 501
+    },
+    {
+      "field": "logRecord.attributes.error.type",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 34
+    },
+    {
+      "field": "logRecord.attributes.exception.stacktrace",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 34
+    },
+    {
+      "field": "logRecord.attributes.exception.type",
+      "verdict": "담기",
+      "clue": 2,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 34
+    },
+    {
+      "field": "resource.service.name",
+      "verdict": "담기(문맥)",
+      "clue": 1,
+      "novel": 1,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 501
+    },
+    {
+      "field": "logRecord.attributes.exception.message",
+      "verdict": "담기",
+      "clue": 1,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 34
+    },
+    {
+      "field": "logRecord.attributes.http.response.status_code",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 249
+    },
+    {
+      "field": "logRecord.attributes.interbank.relay_id",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 1.0,
+      "seen": 38
+    },
+    {
+      "field": "logRecord.attributes.interbank.wait_ms",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 25
+    },
+    {
+      "field": "logRecord.severityText",
+      "verdict": "담기(문맥)",
+      "clue": 0,
+      "novel": 2,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 501
+    },
+    {
+      "field": "logRecord.attributes.db.operation",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 1,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 202
+    },
+    {
+      "field": "resource.service.version",
+      "verdict": "담기",
+      "clue": 0,
+      "novel": 1,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 501
+    },
+    {
+      "field": "logRecord.timeUnixNano",
+      "verdict": "담기(문맥)",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 501
+    },
+    {
+      "field": "logRecord.traceId",
+      "verdict": "토큰화",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.91,
+      "seen": 494
+    },
+    {
+      "field": "logRecord.attributes.counterparty.account",
+      "verdict": "토큰화",
+      "clue": 0,
+      "novel": 0,
+      "leak": 173,
+      "link": 0.73,
+      "seen": 173
+    },
+    {
+      "field": "logRecord.attributes.account.number",
+      "verdict": "토큰화",
+      "clue": 0,
+      "novel": 0,
+      "leak": 475,
+      "link": 1.0,
+      "seen": 475
+    },
+    {
+      "field": "logRecord.attributes.customer.phone",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 2,
+      "leak": 23,
+      "link": 0.0,
+      "seen": 23
+    },
+    {
+      "field": "logRecord.attributes.customer.rrn",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 2,
+      "leak": 23,
+      "link": 0.0,
+      "seen": 23
+    },
+    {
+      "field": "logRecord.attributes.account.balance",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 132
+    },
+    {
+      "field": "logRecord.attributes.auth.method",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 23
+    },
+    {
+      "field": "logRecord.attributes.batch.job",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 1
+    },
+    {
+      "field": "logRecord.attributes.batch.size",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 1
+    },
+    {
+      "field": "logRecord.attributes.counterparty.name",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 113
+    },
+    {
+      "field": "logRecord.attributes.customer.name",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 249
+    },
+    {
+      "field": "logRecord.attributes.db.busy_timeout_ms",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 28
+    },
+    {
+      "field": "logRecord.attributes.db.system",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 227
+    },
+    {
+      "field": "logRecord.attributes.duration_ms",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 471
+    },
+    {
+      "field": "logRecord.attributes.http.request.method",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 249
+    },
+    {
+      "field": "logRecord.attributes.http.route",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 249
+    },
+    {
+      "field": "logRecord.attributes.interbank.bank_code",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 80
+    },
+    {
+      "field": "logRecord.attributes.interbank.response_code",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 19
+    },
+    {
+      "field": "logRecord.attributes.peer.service",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 251
+    },
+    {
+      "field": "logRecord.attributes.server.address",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 6
+    },
+    {
+      "field": "logRecord.attributes.server.port",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 6
+    },
+    {
+      "field": "logRecord.attributes.transfer.amount",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 207
+    },
+    {
+      "field": "logRecord.attributes.transfer.memo",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 70
+    },
+    {
+      "field": "logRecord.attributes.txn.id",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 66
+    },
+    {
+      "field": "logRecord.attributes.txn.type",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 475
+    },
+    {
+      "field": "logRecord.attributes.user_agent.original",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 249
+    },
+    {
+      "field": "logRecord.parentSpanId",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 245
+    },
+    {
+      "field": "logRecord.spanId",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 0.0,
+      "seen": 494
+    },
+    {
+      "field": "resource.deployment.environment",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 1.0,
+      "seen": 501
+    },
+    {
+      "field": "resource.host.name",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 0,
+      "link": 1.0,
+      "seen": 501
+    },
+    {
+      "field": "logRecord.attributes.client.ip",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 249,
+      "link": 0.0,
+      "seen": 249
+    },
+    {
+      "field": "logRecord.attributes.session.id",
+      "verdict": "버림",
+      "clue": 0,
+      "novel": 0,
+      "leak": 249,
+      "link": 0.0,
+      "seen": 249
+    }
+  ]
+}

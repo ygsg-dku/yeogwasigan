@@ -1,0 +1,30 @@
+# 여과은행 장애 원인 분석 목록 — 필드 선택 알고리즘 제안 (보안팀 검토 전 초안)
+# 게이트웨이에 쓰려면 검토 뒤 experiments/yeogwasigan-spring/src/main/resources/templates/ 로 옮기고 다시 빌드한다.
+#
+# 만든 과정 (2026-11-08, gpt-5.1, 실행 기록 fieldsearch_results/)
+#   장애 폴더: scenarios/ (make_scenarios.py). 고르는 장애 F1 대외기관 응답 없음 · F2 원장 잠금 / 검증 장애 F3 잘못된 배포 · F4 디버그 로그
+#   1단계 칸 45 → 후보 16 → AI 확인(넣어 보기·되돌려 빼기) → 7칸
+#   검증 (고를 때 안 쓴 F3·F4, 4점 만점):
+#     문맥·토큰 6칸   0점 · 누출 0
+#     이 목록 7칸     2점 · 누출 0   (F3 2점, F4 0점: 'timed out' 만으로는 대외기관을 못 짚음)
+#     전부 42칸       4점 · 누출 1482
+#   되돌려 빼기에서 body 는 exception.message 와 점수가 같아 빠졌다 (AI 채점 1회씩이라 흔들림 있음).
+#   body 를 넣으면 F4 같은 디버그 로그 사고 때 실명·주민번호가 body 로 나가므로, 넣을지는 보안팀이 정한다.
+purposeId: BANK_INCIDENT_ANALYSIS
+displayName: 은행 장애 원인 분석 (알고리즘 제안)
+description: 여과은행 로그에서 근본 원인과 근거를 찾는다
+requiredFields:
+  - resource.service.name
+  - logRecord.timeUnixNano
+  - logRecord.severityText
+  - logRecord.traceId
+  - logRecord.attributes.counterparty.account
+  - logRecord.attributes.account.number
+  - logRecord.attributes.exception.message
+fieldActions:
+  logRecord.traceId: TOKENIZE_CASE_SCOPED
+  logRecord.attributes.counterparty.account: TOKENIZE_CASE_SCOPED   # 계좌번호는 원문 대신 토큰 (같은 계좌끼리 연결만 남김)
+  logRecord.attributes.account.number: TOKENIZE_CASE_SCOPED
+onUnknownField: DROP
+innerScanOnKeptFields: false
+bodyOnlyWhenImportant: true
