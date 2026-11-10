@@ -1,0 +1,92 @@
+{
+  "aiMode" : "live",
+  "model" : "gpt-5.1-2025-11-13",
+  "select" : [ "BANK_F1_kftcTimeout", "BANK_F2_ledgerLock" ],
+  "validate" : [ "BANK_F3_badDeploy", "BANK_F4_kftcTimeoutDebug" ],
+  "maxScorePerSet" : 4,
+  "base" : {
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.traceId", "logRecord.attributes.counterparty.account", "logRecord.attributes.account.number" ],
+    "score" : 2,
+    "leak" : 0
+  },
+  "gains" : [ {
+    "field" : "logRecord.body",
+    "gain" : 2,
+    "leak" : 0,
+    "score" : 4,
+    "leakDelta" : 0
+  }, {
+    "field" : "logRecord.attributes.error.type",
+    "gain" : 1,
+    "leak" : 0,
+    "score" : 3,
+    "leakDelta" : 0
+  }, {
+    "field" : "logRecord.attributes.exception.stacktrace",
+    "gain" : 1,
+    "leak" : 0,
+    "score" : 3,
+    "leakDelta" : 0
+  }, {
+    "field" : "logRecord.attributes.exception.type",
+    "gain" : 0,
+    "leak" : 0,
+    "score" : 2,
+    "leakDelta" : 0
+  }, {
+    "field" : "logRecord.attributes.exception.message",
+    "gain" : 2,
+    "leak" : 0,
+    "score" : 4,
+    "leakDelta" : 0
+  } ],
+  "chosen" : {
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.traceId", "logRecord.attributes.counterparty.account", "logRecord.attributes.account.number", "logRecord.body", "logRecord.attributes.error.type", "logRecord.attributes.exception.stacktrace", "logRecord.attributes.exception.message" ],
+    "selectScore" : 3,
+    "selectLeak" : 0
+  },
+  "pruning" : [ {
+    "scoreWith" : 3,
+    "leakWithout" : 0,
+    "field" : "logRecord.attributes.error.type",
+    "dropped" : true,
+    "scoreWithout" : 3
+  }, {
+    "scoreWith" : 3,
+    "leakWithout" : 0,
+    "field" : "logRecord.attributes.exception.stacktrace",
+    "dropped" : true,
+    "scoreWithout" : 4
+  }, {
+    "scoreWith" : 4,
+    "leakWithout" : 0,
+    "field" : "logRecord.body",
+    "dropped" : true,
+    "scoreWithout" : 4
+  }, {
+    "scoreWith" : 4,
+    "leakWithout" : 0,
+    "field" : "logRecord.attributes.exception.message",
+    "dropped" : false,
+    "scoreWithout" : 0
+  } ],
+  "final" : {
+    "validateScore" : 2,
+    "fields" : [ "resource.service.name", "logRecord.timeUnixNano", "logRecord.severityText", "logRecord.traceId", "logRecord.attributes.counterparty.account", "logRecord.attributes.account.number", "logRecord.attributes.exception.message" ],
+    "selectLeak" : 0,
+    "selectScore" : 4,
+    "validateLeak" : 0
+  },
+  "compare" : {
+    "passthroughValidateLeak" : 1482,
+    "baseValidateScore" : 0,
+    "baseValidateLeak" : 0,
+    "passthroughValidateScore" : 4
+  },
+  "hand" : {
+    "validateLeak" : 0,
+    "fields" : [ ],
+    "validateScore" : 0
+  },
+  "resumedFrom" : "results/fieldsearch_20261108_181049/summary.json"
+}

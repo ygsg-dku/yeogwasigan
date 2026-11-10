@@ -1,0 +1,6 @@
+# 정답지 — AI 에는 보내지 않는다. 필드 선택 알고리즘의 판정·단서 기준 (make_scenarios.py 가 만듦)
+title: '이체 실패 (원장 잠금)'
+root_cause:
+  summary: '일 마감 이자 계산 배치가 원장 쓰기 잠금을 한 트랜잭션으로 오래 잡아 이체가 busy_timeout 뒤 ''database is locked'' 로 실패했다. 조회는 정상'
+# 1단계 단서 키워드. 한 줄 · 큰따옴표 목록으로 적는다
+cause_keywords: ["잠금", "배치", "이자", "locked", "lock", "busy_timeout", "OperationalError", "batch"]

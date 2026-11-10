@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>여과은행 운영 모니터</title>
+<style>
+  :root { --bg:#14171a; --panel:#1d2125; --line:#2c3238; --ink:#e6e9ec; --sub:#98a2ab; --ok:#3fb27f; --err:#e5534b; --warn:#d9a441; --brand:#4fb39a; --chip:#262b30; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:var(--bg); color:var(--ink); font-size:14px; }
+  header { display:flex; align-items:center; gap:14px; padding:12px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; }
+  .tag { font-size:12px; color:var(--sub); padding:3px 8px; border:1px solid var(--line); border-radius:999px; }
+  header .clock { margin-left:auto; color:var(--sub); font-variant-numeric: tabular-nums; }
+  main { padding:16px 20px 24px; display:grid; grid-template-columns: 2fr 1fr; gap:14px; max-width:1500px; margin:0 auto; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  .full { grid-column: 1 / -1; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; min-width:0; }
+  h2 { font-size:13px; margin:0 0 10px; color:var(--sub); font-weight:600; letter-spacing:.02em; }
+  .cards { display:grid; grid-template-columns: repeat(4, 1fr) 1.6fr; gap:10px; }
+  @media (max-width: 1000px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+  .card { background:var(--chip); border-radius:6px; padding:10px 12px; }
+  .card .name { font-size:12px; color:var(--sub); }
+  .card .state { font-size:16px; font-weight:700; margin-top:4px; }
+  .card .err { font-size:12px; color:var(--sub); margin-top:2px; }
+  .s-ok { color:var(--ok); } .s-bad { color:var(--err); } .s-idle { color:var(--sub); } .s-warn { color:var(--warn); }
+  .alert { border-radius:6px; padding:10px 12px; background:var(--chip); }
+  .alert.on { background:#3a1d1c; border:1px solid var(--err); }
+  .alert.caution { background:#3a3117; border:1px solid var(--warn); }
+  .alert .big { font-size:16px; font-weight:700; }
+  .alert .faults { font-size:12px; color:var(--sub); margin-top:4px; }
+  svg { width:100%; height:180px; display:block; }
+  .legend { display:flex; gap:14px; font-size:12px; color:var(--sub); margin-top:6px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  .btns { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+  button { background:var(--chip); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:9px 10px; font-size:13px; cursor:pointer; text-align:left; }
+  button:hover { border-color:var(--sub); }
+  button.danger { border-color:#5a2b29; }
+  button.primary { background:var(--brand); color:#0d1f1a; border:0; font-weight:700; text-align:center; }
+  button:disabled { opacity:.5; cursor:default; }
+  .cmd { font-family: Menlo, monospace; font-size:12px; color:var(--warn); background:#111417; border-radius:6px; padding:8px 10px; margin-top:10px; min-height:34px; white-space:pre-wrap; word-break:break-all; }
+  .hint { font-size:12px; color:var(--sub); margin-top:8px; line-height:1.5; }
+  .filters { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  select, input { background:var(--chip); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:13px; }
+  input { flex:1; min-width:140px; }
+  .logwrap { max-height:420px; overflow:auto; border-top:1px solid var(--line); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  td { padding:5px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.t { color:var(--sub); white-space:nowrap; font-variant-numeric: tabular-nums; }
+  td.svc { white-space:nowrap; color:#b9c3cc; }
+  td.msg { word-break:break-all; }
+  .lv { font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px; }
+  .lv.ERROR { background:#4a1f1d; color:#ff8b84; } .lv.WARN { background:#4a3a17; color:#f2c86b; } .lv.INFO { background:#1f3a31; color:#7fd3b5; }
+  a.tr { color:var(--brand); cursor:pointer; font-family: Menlo, monospace; font-size:11px; text-decoration:none; }
+  .trace .row { border-left:2px solid var(--line); padding:6px 0 6px 10px; margin-left:4px; }
+  .trace .row.ERROR { border-color:var(--err); }
+  .trace .meta { font-size:12px; color:var(--sub); }
+  .trace pre { margin:4px 0 0; font-size:11.5px; color:#c9d1d9; white-space:pre-wrap; word-break:break-all; font-family: Menlo, monospace; }
+  .result { margin-top:10px; font-size:13px; line-height:1.6; }
+  .result a { color:var(--brand); }
+  .row2 { display:flex; gap:8px; margin-bottom:8px; }
+  .row2 select { flex:1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>여과은행 운영 모니터</h1>
+  <span class="tag">회사 VM · 내부망 전용</span>
+  <span class="tag" id="host">-</span>
+  <span class="clock" id="clock">-</span>
+</header>
+<main>
+  <section class="full">
+    <div class="cards">
+      <div class="card"><div class="name">채널계 channel-ibk</div><div class="state" id="st-channel">-</div><div class="err" id="er-channel-ibk">ERROR 0 (1분)</div></div>
+      <div class="card"><div class="name">계정계 core-ledger</div><div class="state" id="st-core">-</div><div class="err" id="er-core-ledger">ERROR 0 (1분)</div></div>
+      <div class="card"><div class="name">대외기관 kftc-relay</div><div class="state" id="st-kftc">-</div><div class="err" id="er-kftc-relay">ERROR 0 (1분)</div></div>
+      <div class="card"><div class="name">이자 배치 batch-interest</div><div class="state" id="st-batch">-</div><div class="err">일 마감 작업</div></div>
+      <div class="alert" id="alert"><div class="big" id="alert-big">정상</div><div class="faults" id="alert-sub">-</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>최근 5분 로그 (5초 단위)</h2>
+    <svg id="chart" viewBox="0 0 600 180" preserveAspectRatio="none"></svg>
+    <div class="legend"><span><i style="background:var(--err)"></i>ERROR</span><span><i style="background:var(--warn)"></i>WARN</span><span><i style="background:#3a4148"></i>전체</span></div>
+  </section>
+
+  <section>
+    <h2>장애 만들기 (시연용)</h2>
+    <div class="btns">
+      <button class="danger" data-a="kftc-freeze">① 대외기관 멈추기</button><button data-a="kftc-resume">대외기관 되살리기</button>
+      <button class="danger" data-a="batch">② 원장 잠그기 (30초)</button><button data-a="recover">↺ 모두 복구</button>
+      <button class="danger" data-a="deploy-bad">③ 잘못된 포트로 배포</button><button data-a="deploy-fix">바른 포트로 배포</button>
+      <button class="danger" data-a="debug-on">④ 디버그 로그 켜기</button><button data-a="debug-off">디버그 로그 끄기</button>
+    </div>
+    <div class="cmd" id="cmd">실행한 명령이 여기에 나옵니다</div>
+    <div class="hint">버튼은 서버에서 실제 명령(kill -STOP, 배치 실행, 재배포)을 실행합니다. 에러 줄을 지어내지 않습니다.</div>
+  </section>
+
+  <section>
+    <h2>실시간 로그 (원문 · 최신이 위)</h2>
+    <div class="filters">
+      <select id="f-level"><option value="problem">ERROR · WARN</option><option value="all">전체</option></select>
+      <select id="f-svc"><option value="">모든 서비스</option><option>channel-ibk</option><option>core-ledger</option><option>kftc-relay</option><option>batch-interest</option></select>
+      <input id="f-q" placeholder="검색 (예: TimeoutError, 777-…)">
+      <button id="pause" style="text-align:center">일시정지</button>
+    </div>
+    <div class="logwrap"><table><tbody id="logs"></tbody></table></div>
+  </section>
+
+  <section>
+    <h2>여과시간에 분석 요청</h2>
+    <div class="row2">
+      <select id="s-window"><option value="30">최근 30초</option><option value="60">최근 60초</option></select>
+      <select id="s-purpose"><option value="INCIDENT_ANALYSIS">장애 원인 분석 목록</option><option value="BANK_INCIDENT_ANALYSIS">은행 목록 (알고리즘)</option></select>
+    </div>
+    <button class="primary" id="send" style="width:100%">이 구간을 여과시간으로 보내기</button>
+    <div class="result" id="result"><span style="color:var(--sub)">원문은 회사 안 게이트웨이까지만 갑니다. 외부 AI 로는 여과시간이 걸러 만든 파생본만 나갑니다.</span></div>
+    <h2 style="margin-top:18px">요청 추적 (traceId)</h2>
+    <div class="trace" id="trace"><div class="hint">로그의 traceId 를 누르면 채널계 → 계정계 → 대외기관 기록이 이어서 보입니다.</div></div>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const hhmmss = (t) => { const d = new Date(t * 1000); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, "0")).join(":"); };
+  let paused = false;
+
+  async function get(path) { const r = await fetch(path); return r.json(); }
+  async function post(path, body) {
+    const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    return { status: r.status, data: await r.json().catch(() => ({})) };
+  }
+
+  function drawChart(b) {
+    const W = 600, H = 180, n = b.total.length, bw = W / n;
+    const max = Math.max(5, ...b.total);
+    let s = "";
+    for (let i = 0; i < n; i++) {
+      const x = i * bw + 1, w = bw - 2;
+      const ht = b.total[i] / max * (H - 16), he = b.error[i] / max * (H - 16), hw = b.warn[i] / max * (H - 16);
+      s += `<rect x="${x}" y="${H - ht}" width="${w}" height="${ht}" fill="#3a4148"/>`;
+      s += `<rect x="${x}" y="${H - he - hw}" width="${w}" height="${hw}" fill="#d9a441"/>`;
+      s += `<rect x="${x}" y="${H - he}" width="${w}" height="${he}" fill="#e5534b"/>`;
+    }
+    s += `<text x="4" y="12" fill="#98a2ab" font-size="11">최대 ${max}건/5초</text><text x="${W - 4}" y="12" fill="#98a2ab" font-size="11" text-anchor="end">지금</text>`;
+    $("chart").innerHTML = s;
+  }
+
+  async function refreshSummary() {
+    try {
+      const s = await get("/api/summary");
+      $("host").textContent = "host " + s.host;
+      $("clock").textContent = hhmmss(s.now);
+      const map = { channel: "st-channel", core: "st-core", kftc: "st-kftc", batch: "st-batch" };
+      for (const [k, id] of Object.entries(map)) {
+        const v = s.procs[k];
+        const label = k === "batch" ? (v === "실행 중" ? "실행 중 (잠금)" : "대기") : v;
+        const cls = v === "실행 중" ? (k === "batch" ? "s-warn" : "s-ok") : v === "멈춤" ? "s-bad" : (k === "batch" ? "s-idle" : "s-bad");
+        $(id).textContent = label; $(id).className = "state " + cls;
+      }
+      for (const svc of ["channel-ibk", "core-ledger", "kftc-relay"]) $("er-" + svc).textContent = `ERROR ${s.svcErrors1m[svc] || 0} (1분)`;
+      const caution = !s.incident && s.activeFaults.length > 0;
+      $("alert").className = "alert" + (s.incident ? " on" : caution ? " caution" : "");
+      $("alert-big").textContent = (s.incident ? "장애 감지" : caution ? "주의" : "정상") + ` · 최근 30초 ERROR ${s.errors30s}건`;
+      $("alert-sub").textContent = s.activeFaults.length ? "켜진 장애: " + s.activeFaults.join(", ") : `알림 기준: ${s.rule}`;
+      $("send").disabled = !s.canSend;
+      if (!s.canSend) $("send").title = "YG_DEMO_PASSWORD 를 넣고 모니터를 켜야 보낼 수 있습니다";
+      drawChart(s.buckets);
+    } catch (e) { $("alert-big").textContent = "모니터 서버에 연결할 수 없습니다"; }
+  }
+
+  async function refreshLogs() {
+    if (paused) return;
+    const q = new URLSearchParams({ level: $("f-level").value, svc: $("f-svc").value, q: $("f-q").value, limit: 150 });
+    const rows = await get("/api/logs?" + q);
+    $("logs").innerHTML = rows.map(r => `<tr>
+      <td class="t">${hhmmss(r.t)}</td><td><span class="lv ${esc(r.sev)}">${esc(r.sev)}</span></td>
+      <td class="svc">${esc(r.svc)}</td>
+      <td class="msg">${esc(r.body)}${r.trace ? ` <a href="#" class="tr" data-t="${esc(r.trace)}" title="이 요청 추적">${esc(r.trace.slice(0, 8))}…</a>` : ""}</td></tr>`).join("")
+      || `<tr><td class="t">로그가 없습니다</td></tr>`;
+  }
+
+  async function showTrace(id) {
+    const rows = await get("/api/trace?id=" + encodeURIComponent(id));
+    $("trace").innerHTML = `<div class="meta">traceId ${esc(id)} · ${rows.length}건</div>` + rows.map(r => {
+      const a = Object.entries(r.attrs || {}).filter(([k]) => k !== "exception.stacktrace").map(([k, v]) => `${k}: ${v}`).join("\n");
+      return `<div class="row ${esc(r.sev)}"><div><span class="lv ${esc(r.sev)}">${esc(r.sev)}</span> <b>${esc(r.svc)}</b> <span class="meta">${hhmmss(r.t)} · span ${esc((r.span || "").slice(0, 6))}${r.parent ? " ← " + esc(r.parent.slice(0, 6)) : ""}</span></div>
+        <div>${esc(r.body)}</div><pre>${esc(a)}</pre></div>`;
+    }).join("");
+  }
+
+  document.querySelectorAll("button[data-a]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    $("cmd").textContent = "실행 중…";
+    const { data } = await post("/api/fault", { action: b.dataset.a });
+    $("cmd").textContent = (data.commands || [data.error || "실패"]).join("\n");
+    b.disabled = false;
+    refreshSummary();
+  });
+
+  $("send").onclick = async () => {
+    $("send").disabled = true;
+    $("result").innerHTML = "보내는 중…";
+    const { status, data } = await post("/api/send", { window: $("s-window").value, purpose: $("s-purpose").value });
+    $("result").innerHTML = status === 200
+      ? `<b>${esc(data.id)}</b> 요청 생성 · 원문 ${data.records}건 · 칸 ${data.fieldsBefore} → ${data.fieldsAfter} · 높음 경고 <b style="color:${data.highWarnings ? "var(--err)" : "var(--ok)"}">${data.highWarnings}</b><br>
+         <a href="${esc(data.gatewayScreen)}" target="_blank" rel="noopener">여과시간 화면에서 보기 →</a>`
+      : `<span style="color:var(--err)">${esc(data.error || "보내지 못했습니다")}</span>`;
+    $("send").disabled = false;
+  };
+
+  $("logs").onclick = (e) => { const a = e.target.closest("a.tr"); if (a) { e.preventDefault(); showTrace(a.dataset.t); } };
+  $("pause").onclick = () => { paused = !paused; $("pause").textContent = paused ? "다시 보기" : "일시정지"; };
+  ["f-level", "f-svc"].forEach(id => $(id).onchange = refreshLogs);
+  $("f-q").oninput = () => { clearTimeout(window._qt); window._qt = setTimeout(refreshLogs, 300); };
+
+  refreshSummary(); refreshLogs();
+  setInterval(refreshSummary, 2000);
+  setInterval(refreshLogs, 2000);
+</script>
+</body>
+</html>

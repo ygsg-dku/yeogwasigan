@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>여과은행 인터넷뱅킹</title>
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --ink:#1d2733; --sub:#5b6b7b; --line:#dfe5ea; --brand:#0b6e5f; --ok:#1a8f4c; --bad:#c62f2f; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:var(--bg); color:var(--ink); }
+  header { background:var(--brand); color:#fff; padding:14px 20px; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  header h1 { margin:0; font-size:20px; }
+  header span { font-size:13px; opacity:.85; }
+  main { max-width:980px; margin:20px auto; padding:0 16px; display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  section.wide { grid-column: 1 / -1; }
+  h2 { font-size:15px; margin:0 0 12px; }
+  label { display:block; font-size:12px; color:var(--sub); margin:10px 0 4px; }
+  select, input { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font-size:14px; }
+  button { margin-top:12px; padding:9px 14px; border:0; border-radius:6px; background:var(--brand); color:#fff; font-size:14px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .balance { font-size:26px; font-weight:700; margin:6px 0 2px; }
+  .muted { color:var(--sub); font-size:13px; }
+  .result { margin-top:12px; padding:10px 12px; border-radius:6px; font-size:14px; display:none; }
+  .result.ok { display:block; background:#e8f6ee; color:var(--ok); }
+  .result.bad { display:block; background:#fbeaea; color:var(--bad); }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { padding:8px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  td.num { text-align:right; font-variant-numeric: tabular-nums; }
+  .bar { height:10px; border-radius:5px; background:#e8ecef; overflow:hidden; display:flex; min-width:120px; }
+  .bar i { display:block; height:100%; }
+  .bar i.ok { background:var(--ok); } .bar i.bad { background:var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>여과은행 인터넷뱅킹</h1>
+  <span>캡스톤 시연용 가상 은행 · 모든 고객 정보는 가짜</span>
+</header>
+<main>
+  <section>
+    <h2>로그인</h2>
+    <label for="cust">고객 (시연용)</label>
+    <select id="cust"></select>
+    <button id="login">간편인증 로그인</button>
+    <div id="acct" style="display:none; margin-top:14px">
+      <div class="muted" id="acctNo"></div>
+      <div class="balance" id="bal">-</div>
+      <div class="muted">잔액 <a href="#" id="refresh">새로고침</a></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>이체</h2>
+    <label for="bank">받는 은행</label>
+    <select id="bank">
+      <option value="777">여과은행 (당행)</option>
+      <option value="301" selected>가람은행</option>
+      <option value="302">누리은행</option>
+      <option value="303">다솜은행</option>
+    </select>
+    <label for="toAcc">받는 계좌</label>
+    <input id="toAcc" value="301-1234-567890">
+    <label for="toName">받는 분</label>
+    <input id="toName" value="홍길동">
+    <label for="amount">금액 (원)</label>
+    <input id="amount" value="50000" inputmode="numeric">
+    <label for="memo">메모</label>
+    <input id="memo" value="모임 회비">
+    <button id="send" disabled>이체하기</button>
+    <div class="result" id="result"></div>
+  </section>
+
+  <section class="wide">
+    <h2>최근 1분 거래 (가상 손님 포함)</h2>
+    <table>
+      <thead><tr><th>거래</th><th class="num">성공</th><th class="num">실패</th><th style="width:45%">비율</th></tr></thead>
+      <tbody id="stats"></tbody>
+    </table>
+  </section>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const won = (n) => n.toLocaleString("ko-KR") + "원";
+  let idx = null;
+
+  async function api(path, body) {
+    const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {});
+    return { status: r.status, data: await r.json().catch(() => ({})) };
+  }
+
+  async function loadCustomers() {
+    const { data } = await api("/api/customers");
+    $("cust").innerHTML = data.map(c => `<option value="${c.idx}">${c.name} · ${c.account}</option>`).join("");
+  }
+
+  async function refresh() {
+    const { status, data } = await api("/api/inquiry", { idx });
+    $("bal").textContent = status === 200 ? won(data.balance) : "조회 실패";
+  }
+
+  $("login").onclick = async () => {
+    idx = Number($("cust").value);
+    const { data } = await api("/api/login", { idx });
+    $("acct").style.display = "block";
+    $("acctNo").textContent = `${data.name} 님 · ${data.account}`;
+    $("send").disabled = false;
+    refresh();
+  };
+  $("refresh").onclick = (e) => { e.preventDefault(); refresh(); };
+
+  $("send").onclick = async () => {
+    $("send").disabled = true;
+    const box = $("result");
+    box.className = "result"; box.textContent = "";
+    const t0 = performance.now();
+    const { status, data } = await api("/api/transfer", {
+      idx, to_bank: $("bank").value, to_account: $("toAcc").value, to_name: $("toName").value,
+      amount: $("amount").value, memo: $("memo").value,
+    });
+    const sec = ((performance.now() - t0) / 1000).toFixed(1);
+    if (status === 200) {
+      box.className = "result ok";
+      box.textContent = `이체 완료 (${sec}초)`;
+    } else {
+      box.className = "result bad";
+      box.textContent = `이체 실패 ${status}: ${data.error || "알 수 없는 오류"} (${sec}초)`;
+    }
+    $("send").disabled = false;
+    refresh();
+  };
+
+  async function loadStats() {
+    try {
+      const { data } = await api("/api/stats");
+      $("stats").innerHTML = Object.entries(data).map(([k, v]) => {
+        const total = v.ok + v.fail || 1;
+        return `<tr><td>${k}</td><td class="num">${v.ok}</td><td class="num">${v.fail}</td>
+          <td><div class="bar"><i class="ok" style="width:${v.ok / total * 100}%"></i><i class="bad" style="width:${v.fail / total * 100}%"></i></div></td></tr>`;
+      }).join("");
+    } catch (e) { /* 채널계가 잠깐 꺼져도 화면은 그대로 둔다 */ }
+  }
+
+  loadCustomers();
+  loadStats();
+  setInterval(loadStats, 2000);
+</script>
+</body>
+</html>

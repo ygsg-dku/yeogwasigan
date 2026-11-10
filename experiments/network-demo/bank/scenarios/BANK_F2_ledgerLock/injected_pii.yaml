@@ -1,0 +1,967 @@
+# 로그에 실제로 나온 가짜 민감값 (make_scenarios.py 가 자동 생성, 직접 고치지 말 것)
+# 전부 시뮬레이터가 고정 seed 로 만든 가짜 값이다. 주민번호는 검증 숫자가 틀린 번호다.
+items:
+- id: PII-001
+  type: customer.name
+  value: '장수아'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-002
+  type: account.number
+  value: '777-21-382556'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-003
+  type: client.ip
+  value: '112.93.237.149'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-004
+  type: customer.name
+  value: '오하준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-005
+  type: customer.rrn
+  value: '610418-1133602'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-006
+  type: customer.phone
+  value: '010-7412-7656'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-007
+  type: account.number
+  value: '777-19-509453'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-008
+  type: client.ip
+  value: '211.238.12.62'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-009
+  type: customer.name
+  value: '강건우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-010
+  type: customer.rrn
+  value: '800411-2336305'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-011
+  type: customer.phone
+  value: '010-7381-2618'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-012
+  type: account.number
+  value: '777-89-862188'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-013
+  type: client.ip
+  value: '121.19.34.252'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-014
+  type: customer.name
+  value: '윤지호'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-015
+  type: account.number
+  value: '777-46-963829'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-016
+  type: client.ip
+  value: '211.146.132.230'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-017
+  type: customer.name
+  value: '임다은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-018
+  type: customer.rrn
+  value: '690202-1569789'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-019
+  type: customer.phone
+  value: '010-9107-2759'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-020
+  type: account.number
+  value: '777-76-817191'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-021
+  type: client.ip
+  value: '121.23.232.47'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-022
+  type: customer.name
+  value: '권하은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-023
+  type: account.number
+  value: '777-93-989970'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-024
+  type: client.ip
+  value: '121.227.52.111'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-025
+  type: customer.name
+  value: '김수아'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-026
+  type: account.number
+  value: '777-30-231948'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-027
+  type: client.ip
+  value: '112.22.95.25'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-028
+  type: customer.name
+  value: '송하은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-029
+  type: account.number
+  value: '777-49-222393'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-030
+  type: client.ip
+  value: '121.210.198.137'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-031
+  type: customer.name
+  value: '한다은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-032
+  type: account.number
+  value: '777-32-346168'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-033
+  type: client.ip
+  value: '121.38.184.32'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-034
+  type: customer.name
+  value: '박서연'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-035
+  type: account.number
+  value: '777-48-144519'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-036
+  type: client.ip
+  value: '211.212.150.152'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-037
+  type: customer.name
+  value: '송현우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-038
+  type: customer.rrn
+  value: '901206-1945866'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-039
+  type: customer.phone
+  value: '010-5869-8620'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-040
+  type: account.number
+  value: '777-22-665743'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-041
+  type: client.ip
+  value: '211.102.28.96'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-042
+  type: customer.name
+  value: '박유진'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-043
+  type: account.number
+  value: '777-64-842688'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-044
+  type: client.ip
+  value: '175.108.20.5'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-045
+  type: customer.name
+  value: '김민준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-046
+  type: account.number
+  value: '777-65-675037'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-047
+  type: client.ip
+  value: '121.135.173.33'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-048
+  type: customer.name
+  value: '임서윤'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-049
+  type: account.number
+  value: '777-91-833442'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-050
+  type: client.ip
+  value: '211.112.59.25'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-051
+  type: customer.name
+  value: '송도윤'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-052
+  type: account.number
+  value: '777-21-774454'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-053
+  type: customer.name
+  value: '한예준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-054
+  type: customer.rrn
+  value: '870903-2682093'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-055
+  type: customer.phone
+  value: '010-2160-7861'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-056
+  type: account.number
+  value: '777-10-983869'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-057
+  type: client.ip
+  value: '121.88.115.107'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-058
+  type: customer.name
+  value: '오소율'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-059
+  type: account.number
+  value: '777-56-647149'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-060
+  type: client.ip
+  value: '211.173.43.19'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-061
+  type: customer.name
+  value: '박도윤'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-062
+  type: account.number
+  value: '777-78-413999'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-063
+  type: client.ip
+  value: '121.173.87.170'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-064
+  type: customer.name
+  value: '조건우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-065
+  type: account.number
+  value: '777-26-203494'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-066
+  type: client.ip
+  value: '121.221.163.186'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-067
+  type: customer.name
+  value: '송채원'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-068
+  type: account.number
+  value: '777-11-689891'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-069
+  type: client.ip
+  value: '211.52.83.133'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-070
+  type: customer.name
+  value: '권지우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-071
+  type: account.number
+  value: '777-54-138918'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-072
+  type: client.ip
+  value: '121.104.32.250'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-073
+  type: customer.name
+  value: '장서윤'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-074
+  type: account.number
+  value: '777-67-538147'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-075
+  type: client.ip
+  value: '121.115.15.40'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-076
+  type: customer.name
+  value: '강하은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-077
+  type: account.number
+  value: '777-45-729649'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-078
+  type: client.ip
+  value: '175.121.186.27'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-079
+  type: customer.name
+  value: '오서연'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-080
+  type: account.number
+  value: '777-84-488075'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-081
+  type: client.ip
+  value: '112.237.182.239'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-082
+  type: customer.name
+  value: '한민준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-083
+  type: customer.rrn
+  value: '620802-2486492'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-084
+  type: customer.phone
+  value: '010-4411-6002'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-085
+  type: account.number
+  value: '777-52-937008'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-086
+  type: client.ip
+  value: '112.45.115.9'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-087
+  type: customer.name
+  value: '서하준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-088
+  type: customer.rrn
+  value: '760610-2867447'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-089
+  type: customer.phone
+  value: '010-3476-4438'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-090
+  type: account.number
+  value: '777-82-793968'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-091
+  type: client.ip
+  value: '211.40.62.198'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-092
+  type: customer.name
+  value: '안건우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-093
+  type: account.number
+  value: '777-37-201958'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-094
+  type: client.ip
+  value: '112.234.122.148'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-095
+  type: customer.name
+  value: '정건우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-096
+  type: account.number
+  value: '777-81-999023'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-097
+  type: client.ip
+  value: '175.37.7.183'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-098
+  type: customer.name
+  value: '김예준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-099
+  type: account.number
+  value: '777-85-931608'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-100
+  type: client.ip
+  value: '211.121.194.106'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-101
+  type: customer.name
+  value: '홍건우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-102
+  type: account.number
+  value: '777-99-291962'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-103
+  type: client.ip
+  value: '175.248.175.234'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-104
+  type: customer.name
+  value: '한시우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-105
+  type: account.number
+  value: '777-92-540306'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-106
+  type: client.ip
+  value: '121.76.55.184'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-107
+  type: customer.name
+  value: '송지호'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-108
+  type: account.number
+  value: '777-46-807293'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-109
+  type: client.ip
+  value: '175.80.23.83'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-110
+  type: customer.name
+  value: '홍우진'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-111
+  type: account.number
+  value: '777-63-444065'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-112
+  type: client.ip
+  value: '211.215.22.227'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-113
+  type: customer.name
+  value: '서유진'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-114
+  type: account.number
+  value: '777-68-252027'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-115
+  type: client.ip
+  value: '175.65.92.200'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-116
+  type: customer.name
+  value: '송서윤'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-117
+  type: account.number
+  value: '777-36-697187'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-118
+  type: client.ip
+  value: '121.17.18.182'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-119
+  type: customer.name
+  value: '박지우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-120
+  type: customer.rrn
+  value: '600916-1910979'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-121
+  type: customer.phone
+  value: '010-6318-9160'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-122
+  type: account.number
+  value: '777-78-922055'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-123
+  type: client.ip
+  value: '121.195.133.36'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-124
+  type: customer.name
+  value: '류지민'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-125
+  type: account.number
+  value: '777-96-684235'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-126
+  type: client.ip
+  value: '211.14.178.177'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-127
+  type: customer.name
+  value: '서건우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-128
+  type: account.number
+  value: '777-57-138267'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-129
+  type: client.ip
+  value: '211.22.31.198'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-130
+  type: customer.name
+  value: '이소율'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-131
+  type: account.number
+  value: '777-86-160554'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-132
+  type: client.ip
+  value: '175.198.136.11'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-133
+  type: customer.name
+  value: '권예준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-134
+  type: account.number
+  value: '777-67-250777'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-135
+  type: client.ip
+  value: '211.27.226.168'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-136
+  type: customer.name
+  value: '안하준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-137
+  type: customer.rrn
+  value: '660312-1459836'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-138
+  type: customer.phone
+  value: '010-6868-5751'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-139
+  type: account.number
+  value: '777-59-591942'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-140
+  type: client.ip
+  value: '112.206.156.73'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-141
+  type: customer.name
+  value: '신하은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-142
+  type: account.number
+  value: '777-55-900926'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-143
+  type: client.ip
+  value: '175.131.45.95'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-144
+  type: customer.name
+  value: '박하은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-145
+  type: account.number
+  value: '777-20-860438'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-146
+  type: client.ip
+  value: '175.95.191.163'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-147
+  type: customer.name
+  value: '박시우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-148
+  type: account.number
+  value: '777-22-502035'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-149
+  type: client.ip
+  value: '211.116.188.74'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-150
+  type: customer.name
+  value: '안지민'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-151
+  type: account.number
+  value: '777-77-550548'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-152
+  type: client.ip
+  value: '121.19.60.131'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-153
+  type: customer.name
+  value: '임하은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-154
+  type: customer.rrn
+  value: '890818-1923738'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-155
+  type: customer.phone
+  value: '010-5253-3932'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-156
+  type: account.number
+  value: '777-63-224033'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-157
+  type: client.ip
+  value: '175.128.48.153'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-158
+  type: counterparty.name
+  value: '최다은'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-159
+  type: counterparty.account
+  value: '303-7849-824380'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-160
+  type: counterparty.name
+  value: '김시우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-161
+  type: counterparty.account
+  value: '301-3769-167211'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-162
+  type: counterparty.name
+  value: '한서연'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-163
+  type: counterparty.account
+  value: '301-3981-726960'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-164
+  type: counterparty.name
+  value: '박지호'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-165
+  type: counterparty.account
+  value: '301-2226-964756'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-166
+  type: counterparty.name
+  value: '조주원'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-167
+  type: counterparty.account
+  value: '303-9987-369569'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-168
+  type: counterparty.name
+  value: '강주원'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-169
+  type: counterparty.account
+  value: '302-4822-761005'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-170
+  type: counterparty.name
+  value: '이서연'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-171
+  type: counterparty.account
+  value: '301-9340-451777'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-172
+  type: counterparty.name
+  value: '류현우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-173
+  type: counterparty.account
+  value: '301-8295-394428'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-174
+  type: counterparty.name
+  value: '류하준'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-175
+  type: counterparty.account
+  value: '301-3493-635062'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-176
+  type: counterparty.name
+  value: '권서연'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-177
+  type: counterparty.account
+  value: '301-6570-256027'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-178
+  type: counterparty.name
+  value: '최현우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-179
+  type: counterparty.account
+  value: '301-9348-373330'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-180
+  type: counterparty.name
+  value: '장지우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-181
+  type: counterparty.account
+  value: '303-4622-187108'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-182
+  type: counterparty.name
+  value: '오현우'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-183
+  type: counterparty.account
+  value: '302-3049-552715'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-184
+  type: counterparty.name
+  value: '임유진'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-185
+  type: counterparty.account
+  value: '301-1798-305276'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-186
+  type: counterparty.name
+  value: '김서연'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-187
+  type: counterparty.account
+  value: '301-5902-333553'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-188
+  type: session.id
+  value: '0424f145ef8a33546c4c57a2'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-189
+  type: session.id
+  value: '098b3d2f3fa90157536b462b'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-190
+  type: session.id
+  value: '0a482cc142e02fe52c031abc'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-191
+  type: session.id
+  value: '0debcd307c269aca5298345a'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-192
+  type: session.id
+  value: '1365472d3ce30c2af2aa4d82'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-193
+  type: session.id
+  value: '14a5a9a52e770b707f4446f7'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-194
+  type: session.id
+  value: '19c6f5694f50f9a03665b186'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-195
+  type: session.id
+  value: '27f5719658e8d5f9f2d81280'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-196
+  type: session.id
+  value: '2a6c68d3c3f5b42f331bfe44'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-197
+  type: session.id
+  value: '369f16ecdc98fe6e03c5f2ec'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-198
+  type: session.id
+  value: '41393646acf7b3a981179607'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-199
+  type: session.id
+  value: '41db5dd0bf67da9df19718c3'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-200
+  type: session.id
+  value: '45bb378bab64f9743aab55a1'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-201
+  type: session.id
+  value: '4874d5fe962442c723b0848a'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-202
+  type: session.id
+  value: '4f95c2429a92ec2447b48b85'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-203
+  type: session.id
+  value: '531019c279495dfcd5741ae6'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-204
+  type: session.id
+  value: '532f53bb7799f39aaa0f4aab'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-205
+  type: session.id
+  value: '55aff1249c863521867199a6'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-206
+  type: session.id
+  value: '57f313a74c55c5d4a7535b53'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-207
+  type: session.id
+  value: '60949cf7c4f913d6274aff91'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-208
+  type: session.id
+  value: '6349238c4aa95bf6c8ea1aef'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-209
+  type: session.id
+  value: '665ad1a348f28b976a06063b'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-210
+  type: session.id
+  value: '66afa881f46ad077a7b413b4'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-211
+  type: session.id
+  value: '67c5edf5f015aec6bb51a79e'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-212
+  type: session.id
+  value: '74db9ce4eb6851a0bc3354cc'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-213
+  type: session.id
+  value: '78797053da3f0f2e03e672cb'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-214
+  type: session.id
+  value: '7ceade66e86e0e1d83821d5a'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-215
+  type: session.id
+  value: '7d545a811ebf6ea6b660c77a'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-216
+  type: session.id
+  value: '82d2c70732cb7e3b81cb83be'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-217
+  type: session.id
+  value: '8d5c5eb800aeddc438663c3a'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-218
+  type: session.id
+  value: '8df4703f105887af103e3e91'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-219
+  type: session.id
+  value: '9633c0dc933c8093eb0d8c55'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-220
+  type: session.id
+  value: '9a9e831ffe4e82dcc80bfe2d'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-221
+  type: session.id
+  value: '9c3f34e3b225007a26adc2a7'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-222
+  type: session.id
+  value: '9e53ede65d270d2609c9e644'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-223
+  type: session.id
+  value: '9f4bfb8718aee491c4176d89'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-224
+  type: session.id
+  value: 'a044c5f54fa1df947ce49e07'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-225
+  type: session.id
+  value: 'a4c8b58084f70e9adde1832e'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-226
+  type: session.id
+  value: 'a513d7ae8c3688822ea15d16'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-227
+  type: session.id
+  value: 'a735c1b5917e07486f1b72e9'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-228
+  type: session.id
+  value: 'a876e13bc7e349bda91fa8c8'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-229
+  type: session.id
+  value: 'afd833975b4d319b30d4dd07'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-230
+  type: session.id
+  value: 'b97b835d3947c2731f669c52'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-231
+  type: session.id
+  value: 'c31d75d235e5810e20b97026'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-232
+  type: session.id
+  value: 'd4855fd013e133b963c413df'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-233
+  type: session.id
+  value: 'd6924342d359236099786612'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-234
+  type: session.id
+  value: 'e4ffd959e18982935baa2ec6'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-235
+  type: session.id
+  value: 'f0c4cdae0cd6e29c2d194f7c'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-236
+  type: session.id
+  value: 'f4759b4ab68646d1255531be'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-237
+  type: session.id
+  value: 'f5e2b560e8dffa5ad872cca0'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-238
+  type: session.id
+  value: 'f873ade411077f91ae8a4e76'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-239
+  type: session.id
+  value: 'fe23eaa86a9761238d23b1c5'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-240
+  type: session.id
+  value: 'feb4e661a789649f3adfb4c2'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-241
+  type: session.id
+  value: 'ffc697d1bea223966ba7b31f'
+  description: '자연 발생: 원본 로그에 이미 있던 값'
