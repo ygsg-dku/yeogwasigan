@@ -107,7 +107,13 @@ public class AllowlistFilter implements LogFilter {
                 }
 
                 FieldAction action = actions.get(path);
-                if (action != null) {
+                if (action == FieldAction.GENERALIZE_TO_WINDOW) {
+                    // 시각은 구간으로 뭉갠다. 읽을 수 없는 값은 정밀한 값이 새지 않도록 칸째 버린다.
+                    String window = toWindow(value);
+                    if (window != null) {
+                        kept.put(path, window);
+                    }
+                } else if (action != null) {
                     // ② 변환해서 담는다 — 빈 값(예: 최상위 span 의 parentSpanId)은 그대로
                     if (value == null || "".equals(value)) {
                         kept.put(path, value);
@@ -131,6 +137,24 @@ public class AllowlistFilter implements LogFilter {
         notes.put("innerScanEngine", tpl.innerScanEngine().name());
         notes.put("innerScanHits", innerHits);
         return FilterResult.of(logs, output, transformed, notes);
+    }
+
+    /** GENERALIZE_TO_WINDOW 의 구간 크기(초). */
+    static final long WINDOW_SECONDS = 300;
+
+    /** 나노초 시각 → "시작시각/PT5M". 읽을 수 없으면 null. */
+    public static String toWindow(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            long nanos = new java.math.BigDecimal(String.valueOf(value).trim()).longValueExact();
+            long seconds = Math.floorDiv(nanos, 1_000_000_000L);
+            long start = Math.floorDiv(seconds, WINDOW_SECONDS) * WINDOW_SECONDS;
+            return java.time.Instant.ofEpochSecond(start) + "/PT" + (WINDOW_SECONDS / 60) + "M";
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     private static final String BODY = "logRecord.body";

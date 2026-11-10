@@ -1,0 +1,29 @@
+purposeId: INCIDENT_REPORT_DRAFT
+displayName: 장애 보고서 초안
+description: 장애 보고서 초안을 쓰기 위한 개요(어느 서비스가, 언제쯤, 어떤 심각도·응답 코드로)만 담는다. 원인 추적용 정보는 담지 않는다
+
+# 정책 명세 POLICY-02 의 INCIDENT_REPORT_DRAFT 열을 담기 목록으로 옮긴 것.
+# (필드 이름은 OpenTelemetry 3층 구조 resource / scope / logRecord 기준)
+#
+#   service, error_code, version  → KEEP                  → requiredFields
+#   timestamp                     → GENERALIZE_TO_WINDOW  → fieldActions (5분 구간으로 뭉갠다)
+#   event order                   → milestone 만 KEEP       → 기록 순서는 유지된다. milestone 만 고르는 규칙은 아직 없다
+#   relevant stack frame / caller_to_callee / same_transaction / transaction_id / internal_ip
+#                                 → DROP                  → 목록에 없으므로 버려진다
+#   customer_name, account_number, api_secret → DROP      → 목록에 없고, Residual Scanner 도 막는다
+#
+# 명세에 없는데 추가한 칸: logRecord.severityText (보고서에 심각도가 필요해서. 2026-10-12 결정)
+requiredFields:
+  - resource.service.name              # service
+  - resource.service.version           # version
+  - logRecord.severityText             # 심각도 (명세 외 추가)
+  - logRecord.attributes.http.response.status_code   # error_code
+
+fieldActions:
+  logRecord.timeUnixNano: GENERALIZE_TO_WINDOW
+
+onUnknownField: DROP               # 목록에 없으면 버린다 (담기의 핵심)
+innerScanOnKeptFields: false
+# 본문(body)은 이 목록에 없으므로 어떤 기록에서도 담지 않는다. (분석 목록과 달리 bodyOnlyWhenImportant 를 쓰지 않는다)
+bodyOnlyWhenImportant: false
+innerScanEngine: regex

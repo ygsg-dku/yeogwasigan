@@ -61,7 +61,12 @@ public record PurposeTemplate(
         /** 식별자(traceId, spanId 등) → TX_xxxxxxxx. 같은 사건 안에서 관계 추적이 가능하다. */
         TOKENIZE_CASE_SCOPED("TX_"),
         /** 자산 이름(host.name, container.id 등) → PS_xxxxxxxx. */
-        PSEUDONYMIZE_CASE_SCOPED("PS_");
+        PSEUDONYMIZE_CASE_SCOPED("PS_"),
+        /**
+         * 시각 → 시간 구간(5분 단위, 예: 2026-10-05T10:00:00Z/PT5M). 정책 명세의 GENERALIZE_TO_WINDOW.
+         * 토큰이 아니라 정밀도를 줄이는 변환이라 접두어가 없고 사건 ID 와 무관하다.
+         */
+        GENERALIZE_TO_WINDOW("");
 
         private final String prefix;
 
