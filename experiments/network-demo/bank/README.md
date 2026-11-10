@@ -37,15 +37,30 @@
 | `batch_job.py` | 일 마감 이자 배치: 원장 잠금을 한 트랜잭션으로 오래 잡는 실수 (장애 ②) |
 | `bank.sh` | 켜고 끄기 + 장애 일으키기 (실행하는 실제 명령을 `+` 로 찍음) |
 | `make_scenarios.py` | 장애마다 새로 돌려 필드 선택 알고리즘 입력 폴더를 만든다 → `scenarios/BANK_*` |
+| `ops_monitor.py` | 운영 모니터 (회사 VM 안의 개발자·운영자 화면, `static/monitor.html`): 서비스 상태 · 5분 에러 그래프 · 실시간 로그 · traceId 추적 · 장애 버튼 · [여과시간에 분석 요청] |
 
 ## 실행
 
 ```bash
 cd experiments/network-demo/bank
-./bank.sh start 3        # 화면 http://localhost:9000/ (VM 에서는 노트북에서 ssh -L 9000:localhost:9000 -p 2202 ubuntu@10.0.1.37)
+YG_DEMO_PASSWORD='게이트웨이와 같은 비밀번호' ./bank.sh start 3
+#   인터넷뱅킹 http://localhost:9000/ · 운영 모니터 http://localhost:9300/
+#   VM 에서는 노트북에서 ssh -L 9000:localhost:9000 -L 9300:localhost:9300 -p 2202 ubuntu@10.0.1.37
 ./bank.sh status
 ./bank.sh stop           # reset 은 로그·원장까지 지운다
 ```
+
+### 운영 모니터
+
+실무에서 Kibana · Grafana 로 에러를 보는 것을 작게 흉내 낸 화면이다. 회사 VM 안에서 돌고, 원문 로그를 그대로 보여 준다.
+
+- **장애 만들기 (시연용)**: 버튼이 `bank.sh` 의 장애 명령을 그대로 실행하고, 실행한 명령(`+ kill -STOP 12345` 등)을 화면에 찍는다. `↺ 모두 복구` 는 `./bank.sh recover`
+- **장애 감지**: 30초 안 ERROR 8건 이상이면 빨간 알림 (전송기와 같은 기준). 장애를 켰지만 아직 기준 아래면 노란 '주의'
+- **여과시간에 분석 요청**: 최근 30·60초 원문을 게이트웨이로 보낸다 (전송기와 같은 방식, 요청자 `ops-kim`). 목록은 기존 장애 원인 분석 / 은행 목록 중 고른다.
+  게이트웨이 주소는 `YG_GATEWAY_URL` (기본 `http://localhost:8080`, VM 에서는 `http://192.168.0.138:8080`), 화면 링크는 `YG_GATEWAY_SCREEN` (VM 에서는 `http://10.0.1.37:8080`)
+- 모니터로 보낼 때는 전송기(`shipper.py`)를 같이 켜지 않는다 (같은 장애가 두 번 들어간다)
+
+로컬 확인 (11/9): 장애 4종 버튼 · 모두 복구 동작, 장애 ① 보내기 → 칸 40→10 · 높음 경고 0, 장애 ④ 보내기 → 칸 43→10 · 높음 경고 32.
 
 ## 장애 4가지
 
