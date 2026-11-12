@@ -1,0 +1,1234 @@
+{
+ "dir": "/Users/kangdaeun/.codex/.chatgpt-projects/g-p-6aa83fc819348191b12bc82380aec498/yeogwasigan/experiments/yeogwasigan-spring/scenarios",
+ "select": [
+  "S1_paymentFailure",
+  "S2_paymentUnreachable",
+  "S3_productCatalogLockContention",
+  "S4_kafkaQueueProblems",
+  "S5_intlShippingSlowdown",
+  "S6_productCatalogFailure"
+ ],
+ "validate": [
+  "E2a_adFailure",
+  "E2b_cartFailure"
+ ],
+ "context": [
+  "resource.service.name",
+  "logRecord.timeUnixNano",
+  "logRecord.severityText"
+ ],
+ "hand": [
+  "resource.service.name",
+  "logRecord.timeUnixNano",
+  "logRecord.severityText",
+  "logRecord.body",
+  "logRecord.traceId",
+  "logRecord.spanId",
+  "logRecord.parentSpanId",
+  "logRecord.attributes.exception.message",
+  "logRecord.attributes.exception.type",
+  "logRecord.attributes.http.response.status_code"
+ ],
+ "candidates": [
+  {
+   "field": "logRecord.attributes.details",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.exception.message",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.exception.stacktrace",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.exception.type",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.timeUnixNano",
+   "verdict": "담기(문맥)",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.cents",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.context",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.context.total",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.demo.product.id",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.demo.product.name",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.dollars",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.otelSpanID",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.otelTraceID",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.productId",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.quantity",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "resource.container.id",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "resource.os.description",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 1.0
+  },
+  {
+   "field": "resource.service.instance.id",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.amount",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.demo.order.amount",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.demo.shipping.amount",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "resource.process.creation.time",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.demo.order.id",
+   "verdict": "토큰화",
+   "clue": 0,
+   "novel": 4,
+   "leak": 68,
+   "link": 0.71
+  },
+  {
+   "field": "logRecord.attributes.http.response.status_code",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.lastFourDigits",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.severityNumber",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.severityText",
+   "verdict": "담기(문맥)",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 1.0
+  },
+  {
+   "field": "logRecord.attributes.destination.address",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.loyalty_level",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.upstream.host",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.user_currency",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.attributes.currency.to",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 1,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.eventName",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 1,
+   "leak": 0,
+   "link": 0.0
+  },
+  {
+   "field": "logRecord.traceId",
+   "verdict": "토큰화",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.4
+  },
+  {
+   "field": "resource.service.name",
+   "verdict": "담기(문맥)",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0
+  }
+ ],
+ "fields": [
+  {
+   "field": "logRecord.attributes.details",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 6
+  },
+  {
+   "field": "logRecord.attributes.exception.message",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 57
+  },
+  {
+   "field": "logRecord.attributes.exception.stacktrace",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 57
+  },
+  {
+   "field": "logRecord.attributes.exception.type",
+   "verdict": "담기",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 57
+  },
+  {
+   "field": "logRecord.timeUnixNano",
+   "verdict": "담기(문맥)",
+   "clue": 1,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2060
+  },
+  {
+   "field": "logRecord.attributes.cents",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 34
+  },
+  {
+   "field": "logRecord.attributes.context",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 34
+  },
+  {
+   "field": "logRecord.attributes.context.total",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 34
+  },
+  {
+   "field": "logRecord.attributes.demo.product.id",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.demo.product.name",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.dollars",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 34
+  },
+  {
+   "field": "logRecord.attributes.otelSpanID",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.otelTraceID",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.productId",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.quantity",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "resource.container.id",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1530
+  },
+  {
+   "field": "resource.os.description",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.service.instance.id",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 6,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 881
+  },
+  {
+   "field": "logRecord.attributes.amount",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.demo.order.amount",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.demo.shipping.amount",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "resource.process.creation.time",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 4,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 26
+  },
+  {
+   "field": "logRecord.attributes.demo.order.id",
+   "verdict": "토큰화",
+   "clue": 0,
+   "novel": 4,
+   "leak": 68,
+   "link": 0.71,
+   "seen": 68
+  },
+  {
+   "field": "logRecord.attributes.http.response.status_code",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 614
+  },
+  {
+   "field": "logRecord.attributes.lastFourDigits",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.severityNumber",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1941
+  },
+  {
+   "field": "logRecord.severityText",
+   "verdict": "담기(문맥)",
+   "clue": 0,
+   "novel": 3,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 1961
+  },
+  {
+   "field": "logRecord.attributes.destination.address",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.loyalty_level",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.upstream.host",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.user_currency",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 2,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 32
+  },
+  {
+   "field": "logRecord.attributes.currency.to",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 1,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.eventName",
+   "verdict": "담기",
+   "clue": 0,
+   "novel": 1,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 298
+  },
+  {
+   "field": "logRecord.traceId",
+   "verdict": "토큰화",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.4,
+   "seen": 1571
+  },
+  {
+   "field": "resource.service.name",
+   "verdict": "담기(문맥)",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "logRecord.body",
+   "verdict": "버림",
+   "clue": 3,
+   "novel": 0,
+   "leak": 113,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "logRecord.attributes.session.id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 6,
+   "leak": 18,
+   "link": 0.0,
+   "seen": 18
+  },
+  {
+   "field": "logRecord.attributes.user_id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 6,
+   "leak": 32,
+   "link": 0.0,
+   "seen": 32
+  },
+  {
+   "field": "logRecord.attributes.url.full",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 6,
+   "leak": 44,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.userId",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 6,
+   "leak": 85,
+   "link": 0.0,
+   "seen": 87
+  },
+  {
+   "field": "logRecord.attributes.demo.payment.card_number",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 5,
+   "leak": 15,
+   "link": 0.14,
+   "seen": 15
+  },
+  {
+   "field": "logRecord.attributes.user.id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 5,
+   "leak": 15,
+   "link": 0.0,
+   "seen": 15
+  },
+  {
+   "field": "logRecord.attributes.tracking_id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 4,
+   "leak": 20,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.transactionId",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 4,
+   "leak": 20,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.transaction_id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 4,
+   "leak": 20,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.demo.shipping.tracking.id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 4,
+   "leak": 28,
+   "link": 0.0,
+   "seen": 28
+  },
+  {
+   "field": "logRecord.attributes.@OrderResult",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 4,
+   "leak": 40,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.cardType",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.code.file.path",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 19
+  },
+  {
+   "field": "logRecord.attributes.code.function.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 19
+  },
+  {
+   "field": "logRecord.attributes.code.line.number",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 19
+  },
+  {
+   "field": "logRecord.attributes.currency.from",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.demo.order.items.count",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 20
+  },
+  {
+   "field": "logRecord.attributes.event.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.http.request.method",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 614
+  },
+  {
+   "field": "logRecord.attributes.otelServiceName",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.otelTraceSampled",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.products",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 36
+  },
+  {
+   "field": "logRecord.attributes.quote_service_addr",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 34
+  },
+  {
+   "field": "logRecord.attributes.server.address",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.service.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 54
+  },
+  {
+   "field": "logRecord.attributes.source.address",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.upstream.cluster",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.url.query",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.url.template",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.attributes.user_agent.original",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "logRecord.flags",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1348
+  },
+  {
+   "field": "logRecord.observedTimeUnixNano",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1961
+  },
+  {
+   "field": "logRecord.spanId",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1571
+  },
+  {
+   "field": "resource.docker.cli.cobra.command_path",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 1961
+  },
+  {
+   "field": "resource.host.arch",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.host.cpu.cache.l2.size",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.host.cpu.model.id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.host.cpu.stepping",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.host.cpu.vendor.id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.host.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.log_name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "resource.os.build_id",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 26
+  },
+  {
+   "field": "resource.os.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 60
+  },
+  {
+   "field": "resource.os.type",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 2220
+  },
+  {
+   "field": "resource.os.version",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.5,
+   "seen": 1438
+  },
+  {
+   "field": "resource.process.args_count",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 34
+  },
+  {
+   "field": "resource.process.command",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 759
+  },
+  {
+   "field": "resource.process.command_args",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 813
+  },
+  {
+   "field": "resource.process.command_line",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 653
+  },
+  {
+   "field": "resource.process.executable.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 705
+  },
+  {
+   "field": "resource.process.executable.path",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.5,
+   "seen": 1412
+  },
+  {
+   "field": "resource.process.owner",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 765
+  },
+  {
+   "field": "resource.process.pid",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1546
+  },
+  {
+   "field": "resource.process.runtime.description",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1512
+  },
+  {
+   "field": "resource.process.runtime.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 1546
+  },
+  {
+   "field": "resource.process.runtime.version",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1546
+  },
+  {
+   "field": "resource.service.criticality",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 1961
+  },
+  {
+   "field": "resource.service.namespace",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 259
+  },
+  {
+   "field": "resource.telemetry.auto.version",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 17
+  },
+  {
+   "field": "resource.telemetry.distro.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.33,
+   "seen": 733
+  },
+  {
+   "field": "resource.telemetry.distro.version",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 733
+  },
+  {
+   "field": "resource.telemetry.sdk.language",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1961
+  },
+  {
+   "field": "resource.telemetry.sdk.name",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 1.0,
+   "seen": 1961
+  },
+  {
+   "field": "resource.telemetry.sdk.version",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 0,
+   "link": 0.0,
+   "seen": 1961
+  },
+  {
+   "field": "logRecord.attributes.user.email",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 15,
+   "link": 0.14,
+   "seen": 15
+  },
+  {
+   "field": "logRecord.attributes.url.path",
+   "verdict": "버림",
+   "clue": 0,
+   "novel": 0,
+   "leak": 44,
+   "link": 0.16,
+   "seen": 873
+  }
+ ]
+}

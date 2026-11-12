@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -46,13 +46,23 @@ public class TemplateLoader {
     }
 
     private TemplateLoader(Collection<PurposeTemplate> list) {
-        Map<String, PurposeTemplate> map = new TreeMap<>();
+        Map<String, PurposeTemplate> map = new ConcurrentSkipListMap<>();
         for (PurposeTemplate t : list) {
             if (map.put(t.purposeId(), t) != null) {
                 throw new IllegalStateException("purposeId 가 중복된 템플릿이 있습니다: " + t.purposeId());
             }
         }
         this.templates = map;
+    }
+
+    /**
+     * 실행 중에 템플릿을 하나 더한다 (목록 제안이 승인되었을 때). 같은 purposeId 가 이미 있으면 거부한다.
+     * ponytail: 메모리에만 더한다 — 서버를 다시 띄우면 사라진다. 계속 쓰려면 templates/ 에 YAML 로 두거나 DB 에 저장할 것.
+     */
+    public void register(PurposeTemplate t) {
+        if (templates.putIfAbsent(t.purposeId(), t) != null) {
+            throw new IllegalStateException("purposeId 가 이미 있습니다: " + t.purposeId());
+        }
     }
 
     /** 테스트 등에서 템플릿을 직접 지정할 때. */

@@ -58,7 +58,8 @@ class PackageGoldenTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        log = Files.readString(Path.of("scenarios", TestSupport.SAMPLE, "raw.jsonl"));
+        // 입력도 줄바꿈을 맞춘다. CRLF 로 체크아웃되면 입력 해시(=토큰)가 달라져 OS 마다 golden 이 어긋난다
+        log = Files.readString(Path.of("scenarios", TestSupport.SAMPLE, "raw.jsonl")).replace("\r\n", "\n");
         AppProperties app = new AppProperties(null, null, null,
                 new AppProperties.Ai("openai", null, 0, null, true, null, null, null), null, null);
         TemplateLoader templates = templates();

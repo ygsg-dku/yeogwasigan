@@ -31,6 +31,8 @@ import com.capstone.yeogwasigan.core.ai.AiClient;
 import com.capstone.yeogwasigan.core.config.AppProperties;
 import com.capstone.yeogwasigan.core.config.ExperimentConstants;
 import com.capstone.yeogwasigan.core.filter.AllowlistFilter;
+import com.capstone.yeogwasigan.core.filter.LogFilter;
+import com.capstone.yeogwasigan.core.filter.PassthroughFilter;
 import com.capstone.yeogwasigan.core.filter.FilterResult;
 import com.capstone.yeogwasigan.core.presidio.PresidioClient;
 import com.capstone.yeogwasigan.core.scenario.Scenario;
@@ -48,9 +50,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
  * 필드 선택 알고리즘의 AI 확인 단계 (fieldsearch 프로파일).
  *
  * <pre>
- *   python3 scripts/field_select.py --json data/fieldsearch_candidates.json   # 1차 후보 (AI 없음)
- *   ./gradlew bootRun --args='--spring.profiles.active=fieldsearch'          # 이 단계
+ *   scripts/fieldsearch.sh            # 1단계(field_select.py) → 이 단계를 한 번에
  * </pre>
+ *
+ * 장애 폴더 루트·고르는 장애(select)·검증 장애(validate)는 1단계가 쓴 후보 파일에서 읽는다 (두 단계가 같은 장애를 보게).
+ * 판정용 정답 원인은 장애 폴더의 truth.yaml root_cause.summary 다.
  *
  * 1) 기준 목록 = 문맥 칸(서비스·시각·심각도) + 1차에서 토큰화로 판정된 ID 칸
  * 2) 고르는 장애(select)에서 기준 목록과, 기준 + 후보 하나씩을 담기 필터로 거른 뒤 AI 에 묻고 채점한다
@@ -74,44 +78,34 @@ public class FieldSearchRunner implements CommandLineRunner {
     private static final String PURPOSE = "FIELD_SEARCH";
     private static final Pattern DIGIT = Pattern.compile("[012]");
 
-    private final ScenarioRepository scenarios;
     private final ResidualScorer scorer;
     private final AiClient ai;
     private final CaseScopedTokenizer tokenizer;
     private final PresidioClient presidio;
     private final AppProperties props;
     private final String candidatesFile;
-    private final List<String> selectIds;
-    private final List<String> validateIds;
     private final int maxCandidates;
     private final int minClue;
     private final String resumeFrom;
-    private final Map<String, String> truths;
     private final ConfigurableApplicationContext context;
+    private ScenarioRepository scenarios;
 
-    public FieldSearchRunner(ConfigurableApplicationContext context, ScenarioRepository scenarios, ResidualScorer scorer, AiClient ai, CaseScopedTokenizer tokenizer,
+    public FieldSearchRunner(ConfigurableApplicationContext context, ResidualScorer scorer, AiClient ai, CaseScopedTokenizer tokenizer,
                              PresidioClient presidio, AppProperties props,
                              @Value("${yeogwasigan.fieldsearch.candidates-file}") String candidatesFile,
-                             @Value("${yeogwasigan.fieldsearch.select}") List<String> selectIds,
-                             @Value("${yeogwasigan.fieldsearch.validate}") List<String> validateIds,
                              @Value("${yeogwasigan.fieldsearch.max-candidates:15}") int maxCandidates,
                              @Value("${yeogwasigan.fieldsearch.min-clue:0}") int minClue,
-                             @Value("${yeogwasigan.fieldsearch.resume-from:}") String resumeFrom,
-                             @Value("#{${yeogwasigan.fieldsearch.truths}}") Map<String, String> truths) {
+                             @Value("${yeogwasigan.fieldsearch.resume-from:}") String resumeFrom) {
         this.context = context;
-        this.scenarios = scenarios;
         this.scorer = scorer;
         this.ai = ai;
         this.tokenizer = tokenizer;
         this.presidio = presidio;
         this.props = props;
         this.candidatesFile = candidatesFile;
-        this.selectIds = selectIds;
-        this.validateIds = validateIds;
         this.maxCandidates = maxCandidates;
         this.minClue = minClue;
         this.resumeFrom = resumeFrom;
-        this.truths = truths;
     }
 
     /** 칸 목록 하나: 담을 칸과 토큰화할 칸, 본문 조건. */
@@ -137,6 +131,9 @@ public class FieldSearchRunner implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
         JsonNode cand = new ObjectMapper().readTree(Path.of(candidatesFile).toFile());
+        scenarios = new ScenarioRepository(Path.of(cand.get("dir").asText()));
+        List<String> selectIds = strings(cand.get("select"));
+        List<String> validateIds = strings(cand.get("validate"));
         List<String> context = strings(cand.get("context"));
         Set<String> tokenize = new LinkedHashSet<>();
         List<String> pool = new ArrayList<>();
@@ -157,12 +154,14 @@ public class FieldSearchRunner implements CommandLineRunner {
         FieldSet base = new FieldSet("기준", baseFields, tokenize, true);
 
         List<String> hand = strings(cand.get("hand"));
-        FieldSet handSet = new FieldSet("손으로 고른 10칸", hand,
+        FieldSet handSet = new FieldSet("손으로 고른 목록", hand,
                 Set.of("logRecord.traceId", "logRecord.spanId", "logRecord.parentSpanId"), true);
 
         Path runDir = Path.of(props.resultsDir()).toAbsolutePath()
                 .resolve("fieldsearch_" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss")));
         Files.createDirectories(runDir);
+        // 1단계 점수표도 같이 남긴다 (목록 제안 화면 /fieldsearch.html 이 읽는다)
+        Files.copy(Path.of(candidatesFile), runDir.resolve("candidates.json"));
         List<Scenario> select = selectIds.stream().map(scenarios::get).toList();
         List<Scenario> validate = validateIds.stream().map(scenarios::get).toList();
         log.info("AI 모드 {} · 고르는 장애 {} · 검증 장애 {} · 기준 {}칸 · 후보 {}개",
@@ -186,7 +185,8 @@ public class FieldSearchRunner implements CommandLineRunner {
                     Eval e = evaluate("select", base.with("기준+" + f, f), f, select, csv);
                     int gain = e.score() - baseScore;
                     gains.add(Map.of("field", f, "score", e.score(), "gain", gain, "leak", e.leak(), "leakDelta", e.leak() - baseLeak));
-                    if (gain > 0) {
+                    // 누출이 늘어나는 칸은 점수가 올라도 넣지 않는다 (10/30 결정: 감점 대신 금지. 누출 칸은 1단계 조건부로)
+                    if (gain > 0 && e.leak() <= baseLeak) {
                         kept.add(f);
                     }
                     log.info("  {} → 점수 {} (기준 {}, {}{})  누출 {}", f, e.score(), baseScore, gain >= 0 ? "+" : "", gain, e.leak());
@@ -195,7 +195,8 @@ public class FieldSearchRunner implements CommandLineRunner {
                     chosen = chosen.with("알고리즘 목록", f);
                 }
                 chosenSel = evaluate("select", chosen, null, select, csv);
-                Eval handVal = evaluate("validate", handSet, null, validate, csv);
+                // 손으로 고른 목록이 없으면(새 시스템) 비교를 건너뛴다
+                Eval handVal = hand.isEmpty() ? new Eval(0, 0, 0) : evaluate("validate", handSet, null, validate, csv);
                 handValScore = handVal.score();
                 handValLeak = handVal.leak();
             } else {
@@ -247,6 +248,9 @@ public class FieldSearchRunner implements CommandLineRunner {
             }
             FieldSet finalSet = new FieldSet("알고리즘 최종", current.fields(), current.tokenize(), current.bodyOnlyWhenImportant());
             Eval finalVal = evaluate("validate", finalSet, null, validate, csv);
+            // 비교 기준 (검증 장애): 문맥·토큰화 칸만 보낸 경우와 전부 보낸 경우(그대로)
+            Eval baseVal = evaluate("validate", base, null, validate, csv);
+            Eval passVal = evaluate("validate", "그대로", new PassthroughFilter(), null, validate, csv);
 
             summary.put("aiMode", ai.mode());
             summary.put("model", ai.model());
@@ -259,6 +263,8 @@ public class FieldSearchRunner implements CommandLineRunner {
             summary.put("pruning", pruning);
             summary.put("final", Map.of("fields", finalSet.fields(), "selectScore", currentEval.score(), "selectLeak", currentEval.leak(),
                     "validateScore", finalVal.score(), "validateLeak", finalVal.leak()));
+            summary.put("compare", Map.of("baseValidateScore", baseVal.score(), "baseValidateLeak", baseVal.leak(),
+                    "passthroughValidateScore", passVal.score(), "passthroughValidateLeak", passVal.leak()));
             summary.put("hand", Map.of("fields", hand, "validateScore", handValScore, "validateLeak", handValLeak));
             if (!resumeFrom.isBlank()) {
                 summary.put("resumedFrom", resumeFrom);
@@ -271,7 +277,12 @@ public class FieldSearchRunner implements CommandLineRunner {
     }
 
     private Eval evaluate(String phase, FieldSet set, String added, List<Scenario> list, CSVPrinter csv) throws IOException {
-        AllowlistFilter filter = new AllowlistFilter(TemplateLoader.of(List.of(template(set))), tokenizer, presidio);
+        return evaluate(phase, set.label(), new AllowlistFilter(TemplateLoader.of(List.of(template(set))), tokenizer, presidio),
+                added, list, csv);
+    }
+
+    private Eval evaluate(String phase, String label, LogFilter filter, String added, List<Scenario> list, CSVPrinter csv)
+            throws IOException {
         int score = 0, leak = 0, chars = 0;
         for (Scenario s : list) {
             FilterResult r = filter.apply(s.raw(), s.id(), PURPOSE);
@@ -281,7 +292,7 @@ public class FieldSearchRunner implements CommandLineRunner {
             score += judge;
             leak += residual;
             chars += a.promptChars();
-            csv.printRecord(phase, set.label(), added == null ? "" : added, s.id(), r.fieldsAfter(), residual, judge,
+            csv.printRecord(phase, label, added == null ? "" : added, s.id(), r.fieldsAfter(), residual, judge,
                     a.promptChars(), a.text());
             csv.flush();
         }
@@ -293,7 +304,7 @@ public class FieldSearchRunner implements CommandLineRunner {
         if (!"live".equals(answer.mode())) {
             return 0;
         }
-        String truth = truths.get(scenarioId.split("_")[0]);
+        String truth = truthOf(scenarioId);
         String prompt = "장애의 실제 원인: " + truth + "\n\n"
                 + "아래는 AI 의 장애 분석 답변이다. 답변이 장애가 난 서비스와 원인을 맞혔는지 판정하라.\n"
                 + "2 = 서비스와 원인을 모두 맞힘, 1 = 서비스만 맞힘, 0 = 틀림 또는 장애 없음.\n"
@@ -301,6 +312,14 @@ public class FieldSearchRunner implements CommandLineRunner {
         AiAnswer j = ai.complete(prompt);
         Matcher m = DIGIT.matcher(j.text());
         return m.find() ? Integer.parseInt(m.group()) : 0;
+    }
+
+    /** truth.yaml root_cause.summary. 없으면 판정할 수 없으므로 멈춘다 (0점으로 넘기면 결과가 조용히 틀어진다). */
+    private String truthOf(String scenarioId) {
+        if (scenarios.truth(scenarioId).get("root_cause") instanceof Map<?, ?> rc && rc.get("summary") != null) {
+            return String.valueOf(rc.get("summary")).strip();
+        }
+        throw new IllegalStateException(scenarioId + "/truth.yaml 에 root_cause.summary 가 없습니다");
     }
 
     private static PurposeTemplate template(FieldSet set) {
