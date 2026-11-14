@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.capstone.yeogwasigan.core.ai.AiAnswer;
 import com.capstone.yeogwasigan.core.ai.AiClient;
@@ -55,10 +57,19 @@ public class GatewayService {
     private final Preprocessor preprocessor;
     private final GatewayRequestRepository requests;
     private final AuditEventRepository audit;
+    private final TransactionTemplate tx; // null 이면 예전처럼 차례로 저장(시험용 생성자)
 
     public GatewayService(GatewayProperties props, FilterRegistry filters, TemplateLoader templates,
                           AiClient aiClient, PreprocessProperties preprocessProps,
                           GatewayRequestRepository requests, AuditEventRepository audit) {
+        this(props, filters, templates, aiClient, preprocessProps, requests, audit, null);
+    }
+
+    @Autowired
+    public GatewayService(GatewayProperties props, FilterRegistry filters, TemplateLoader templates,
+                          AiClient aiClient, PreprocessProperties preprocessProps,
+                          GatewayRequestRepository requests, AuditEventRepository audit,
+                          TransactionTemplate tx) {
         this.props = props;
         this.filters = filters;
         this.templates = templates;
@@ -70,6 +81,7 @@ public class GatewayService {
                 null, 0, 0, preprocessProps.maxInputTokens()));
         this.requests = requests;
         this.audit = audit;
+        this.tx = tx;
     }
 
     public List<Role> roles(String user) {
@@ -118,8 +130,7 @@ public class GatewayService {
         GatewayRequest req = new GatewayRequest(id, user, p, endpoint, sha256(log), logs.size(), listVersion(p),
                 r.output(), packageSha(r.output()), r.fieldsBefore(), r.fieldsAfter(), r.droppedFields(),
                 warnings, approvalRequired, now, now.plus(Duration.ofDays(props.payloadRetentionDays())));
-        requests.save(req);
-        log(id, user, "CREATED", String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s, 목록 %s, 높음 경고 %d건 → %s",
+        saveAndLog(req, user, "CREATED", String.format("레코드 %d건 → 반복 줄여 %d건, 필드 %d → %d, 대상 %s, 목록 %s, 높음 경고 %d건 → %s",
                 logs.size(), reduced.size(), r.fieldsBefore(), r.fieldsAfter(), endpoint, req.getListVersion(), high,
                 approvalRequired ? "승인 필요" : "승인 없이 전송 가능(조건부)"));
         return req;
@@ -151,8 +162,7 @@ public class GatewayService {
         List<GatewayRequest> expired = requests.findByPayloadExpiresAtBeforeAndPayloadJsonIsNotNull(now);
         for (GatewayRequest r : expired) {
             r.purgePayload();
-            requests.save(r);
-            log(r.getId(), "gateway", "PAYLOAD_PURGED", "보관 기간(" + props.payloadRetentionDays() + "일)이 지나 파생본을 지움");
+            saveAndLog(r, "gateway", "PAYLOAD_PURGED", "보관 기간(" + props.payloadRetentionDays() + "일)이 지나 파생본을 지움");
         }
         return expired.size();
     }
@@ -163,6 +173,19 @@ public class GatewayService {
             n++;
         }
         return String.format("REQ-%04d", n);
+    }
+
+    /** 요청 저장과 감사 기록을 한 묶음으로 확정한다. tx 가 없으면(시험용 생성자) 예전처럼 차례로 저장한다 */
+    private void saveAndLog(GatewayRequest r, String actor, String type, String detail) {
+        if (tx == null) {
+            requests.save(r);
+            log(r.getId(), actor, type, detail);
+            return;
+        }
+        tx.executeWithoutResult(s -> {
+            requests.save(r);
+            log(r.getId(), actor, type, detail);
+        });
     }
 
     private void log(String id, String actor, String type, String detail) {
@@ -195,8 +218,7 @@ public class GatewayService {
                     throw new IllegalArgumentException("반려 사유를 적어 주세요.");
                 }
                 r.reject(user, comment.trim());
-                requests.save(r);
-                log(id, user, "REJECTED", comment.trim() + " · 대기 " + waited(r));
+                saveAndLog(r, user, "REJECTED", comment.trim() + " · 대기 " + waited(r));
                 return r;
             }
             if (!r.getPackageSha256().equals(seenPackageSha)) {
@@ -213,8 +235,7 @@ public class GatewayService {
             }
             String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
             r.approve(user, fp, note);
-            requests.save(r);
-            log(id, user, "APPROVED", "지문 " + fp.substring(0, 12) + (note != null ? " · " + note : "") + " · 대기 " + waited(r));
+            saveAndLog(r, user, "APPROVED", "지문 " + fp.substring(0, 12) + (note != null ? " · " + note : "") + " · 대기 " + waited(r));
             dispatch(r);
             requests.save(r);
             return r;
@@ -249,8 +270,7 @@ public class GatewayService {
         }
         String fp = fingerprint(r.getPackageSha256(), r.getListVersion(), r.getEndpointId());
         r.skipApproval(fp, "승인 생략: 높음 경고 없음(조건부 승인)");
-        requests.save(r);
-        log(id, user, "APPROVAL_SKIPPED", "높음 경고 없음 · 조건부 승인 · 지문 " + fp.substring(0, 12));
+        saveAndLog(r, user, "APPROVAL_SKIPPED", "높음 경고 없음 · 조건부 승인 · 지문 " + fp.substring(0, 12));
         dispatch(r);
         requests.save(r);
         return r;
@@ -285,13 +305,13 @@ public class GatewayService {
         r.sent(a.text(), a.mode(), a.model());
         // 받는 쪽 기록(receiver)과 맞춰 볼 수 있게 실제로 보낸 프롬프트의 해시를 남긴다
         String sentSha = sha256(AiClient.buildPrompt(r.getPayload(), ExperimentConstants.FIXED_QUESTION));
-        log(r.getId(), "gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자, 보낸 내용 sha256=%s",
+        saveAndLog(r, "gateway", "SENT", String.format("%s %s (%s), 프롬프트 %,d자, 보낸 내용 sha256=%s",
                 r.getEndpointId(), a.model(), a.mode(), a.promptChars(), sentSha));
     }
 
     private void fail(GatewayRequest r, String type, String reason) {
         r.sendFailed(reason);
-        log(r.getId(), "gateway", type, reason);
+        saveAndLog(r, "gateway", type, reason);
     }
 
     private void require(String user, Role role) {
