@@ -1,0 +1,127 @@
+# E2a_adFailure — 전처리 ④ 가 만든 민감값 목록 (자동 생성, 직접 고치지 말 것)
+# ResidualScorer 가 결과물(AI 로 실제 전송되는 텍스트)에서 value 를 문자열 검색으로 센다.
+# type 은 PROTOCOL v1.1 민감 키 이름. description 이 '자연 발생'이면 원본 로그에 원래 있던 값,
+# '주입'이면 같은 traceId 의 span 에만 있던 값을 로그에 옮겨 넣은 것이다.
+items:
+- id: PII-001
+  type: user.id
+  value: 69479e4b-5c8b-47a5-9fb5-a855195d8eb8
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-002
+  type: session.id
+  value: f5312273-0198-4c34-b02c-2185bcecfa8f
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-003
+  type: session.id
+  value: 78963a21-67e0-4456-aad4-21aa509b3940
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-004
+  type: user.id
+  value: 7a18f8e0-c0c6-11f1-bb65-0242ac130017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-005
+  type: demo.order.id
+  value: 7a1f58ec-c0c6-11f1-a301-0242ac130013
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-006
+  type: demo.shipping.tracking.id
+  value: 5b953879-35d0-4a64-aedc-c29f73e5e926
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-007
+  type: user.id
+  value: 84d41a6c-c0c6-11f1-bb65-0242ac130017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-008
+  type: user.id
+  value: 8b85d04e-c0c6-11f1-bb65-0242ac130017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-009
+  type: demo.order.id
+  value: 8b911331-c0c6-11f1-a301-0242ac130013
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-010
+  type: demo.shipping.tracking.id
+  value: 911cf83a-1a91-4162-bf6a-864ce3514df8
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-011
+  type: session.id
+  value: 05c0f9d6-46a6-482f-97c8-ef93b624c8f1
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-012
+  type: user.id
+  value: ae30c9fa-c0c6-11f1-bb65-0242ac130017
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-013
+  type: demo.order.id
+  value: ae38b15b-c0c6-11f1-a301-0242ac130013
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-014
+  type: demo.shipping.tracking.id
+  value: 09e4e7af-b880-4c10-a734-f39d4499ac1b
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-015
+  type: session.id
+  value: a69b9333-381f-46f4-b7b7-48ee3e0ff8cc
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-016
+  type: session.id
+  value: 4938d915-38e4-4398-b5a7-02f6bb97d344
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-017
+  type: transaction_id
+  value: 29c8b8ec-c79f-4a92-89c5-936103cd4bba
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-018
+  type: transaction_id
+  value: 43d107a4-5603-4725-9adf-7087d6baedae
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-019
+  type: transaction_id
+  value: 3ffe07af-5d7a-4ef2-a23e-8d61111bda68
+  description: '자연 발생: 원본 로그에 이미 있던 값'
+- id: PII-020
+  type: session.id
+  value: 20b290bc-3259-4b53-8644-cc7f699e2902
+  description: '주입: logRecord.attributes.session.id ← span(ad, traceId 76450e23f0949e751a2fa55b4e29c4da)'
+- id: PII-021
+  type: session.id
+  value: a941daa4-32a1-4389-a941-c13f9713833c
+  description: '주입: logRecord.body ← span(frontend-web, traceId 43a2a584ef60add034bac2ba075df2f5)'
+- id: PII-022
+  type: session.id
+  value: ef6c3e57-8fb5-4f3e-8a86-25088d8a53b8
+  description: '주입: logRecord.attributes.session.id ← span(ad, traceId 40a0ecc6beca68f745ef31a4163a6941)'
+- id: PII-023
+  type: user.email
+  value: steve@example.com
+  description: '주입: logRecord.attributes.user.email ← span(checkout, traceId 1e5e74a4d41636125a8aa9ef484f1185)'
+- id: PII-024
+  type: demo.payment.card_number
+  value: 4532-6178-2799-1951
+  description: '주입: logRecord.attributes.demo.payment.card_number ← span(checkout,
+    traceId 1e5e74a4d41636125a8aa9ef484f1185)'
+- id: PII-025
+  type: session.id
+  value: c00547c4-71bd-49ba-8c5d-22f86add30e7
+  description: '주입: logRecord.body ← span(ad, traceId 72bca69809252df25b867c427b3b44b6)'
+- id: PII-026
+  type: user.email
+  value: tobias@example.com
+  description: '주입: logRecord.body ← span(checkout, traceId d834bb055d497bad6381b07e272c55d2)'
+- id: PII-027
+  type: demo.payment.card_number
+  value: 4763-1844-9699-8031
+  description: '주입: logRecord.body ← span(checkout, traceId d834bb055d497bad6381b07e272c55d2)'
+- id: PII-028
+  type: session.id
+  value: 403e90be-38ba-477a-9771-28ffb5229fb8
+  description: '주입: logRecord.attributes.session.id ← span(frontend-web, traceId ac5a564fdbf71a233ef976e366135ed4)'
+- id: PII-029
+  type: user.email
+  value: larry_sergei@example.com
+  description: '주입: logRecord.attributes.user.email ← span(checkout, traceId 403f91aeaf40195947592223f01e6ac6)'
+- id: PII-030
+  type: demo.payment.card_number
+  value: 4432-8015-6152-0454
+  description: '주입: logRecord.attributes.demo.payment.card_number ← span(checkout,
+    traceId 403f91aeaf40195947592223f01e6ac6)'

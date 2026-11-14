@@ -1,0 +1,72 @@
+{
+  "scenario" : "E2a_adFailure",
+  "source" : "/Users/kangdaeun/.codex/.chatgpt-projects/g-p-6aa83fc819348191b12bc82380aec498/yeogwasigan/experiments/pilot/scenarios/E2a_adFailure/raw.jsonl",
+  "rules" : {
+    "sourceDir" : "../pilot/scenarios",
+    "scenarios" : [ "E2a_adFailure", "E2b_cartFailure" ],
+    "excludeServices" : [ "load-generator", "otelcol-contrib", "flagd", "flagd-ui" ],
+    "excludeAttributePrefixes" : [ "feature_flag", "demo.feature_flag." ],
+    "excludeBodyContains" : [ "/flagservice/" ],
+    "stripPhrases" : [ " Feature Flag Enabled" ],
+    "dropIfContains" : [ "feature flag", "FeatureFlag", "feature_flag", "scenario active", "paymentFailure", "paymentUnreachable", "productCatalogFailure", "productCatalogLockContention", "kafkaQueueProblems", "intlShippingSlowdown", "emitRawPii", "adFailure", "cartFailure", "recommendationCacheFailure" ],
+    "keepFirst" : 5,
+    "keepLast" : 1,
+    "keepSlowest" : 3,
+    "piiKeys" : [ "demo.payment.card_number", "demo.payment.card_cvv", "lastFourDigits", "user.id", "session.id", "user.email", "demo.order.id", "demo.shipping.tracking.id", "transactionId", "transaction_id", "tracking_id" ],
+    "piiMinLength" : 6,
+    "piiMaxPerKey" : 5,
+    "maxInputTokens" : 250000
+  },
+  "inputRecords" : 2780,
+  "step1_excludeTestEquipment" : {
+    "droppedByService" : {
+      "load-generator" : 242,
+      "otelcol-contrib" : 498
+    },
+    "droppedByBodyContains" : 29,
+    "remainingRecords" : 2011
+  },
+  "step3_removeInjectionTraces" : {
+    "strippedValuesByPhrase" : { },
+    "droppedByTerm" : {
+      "feature_flag" : 1
+    },
+    "removedAttributeKeys" : { },
+    "remainingRecords" : 2010
+  },
+  "step2_reduceRepeats" : {
+    "groups" : 74,
+    "keptImportant(WARN+/5xx)" : 12,
+    "keptTotal" : 341,
+    "droppedRepeats" : 1669,
+    "maxProxyDurationMs" : 470,
+    "topGroupsBefore" : [ "893x frontend-proxy |  | GET | - | 200 | <envoy access log>", "268x product-catalog | 9 |  |  |  | Product Found", "100x recommendation | 9 |  |  |  | Receive ListRecommendations for product ids:['*', '*', '*', '*', '*']", "68x cart | 9 |  |  |  | GetCartAsync called with userId={userId}", "66x product-catalog | 9 |  |  |  | Found # products from database", "50x frontend | 9 | GET | /api/recommendations | 200 | API request completed", "49x frontend | 9 | GET | /api/cart | 200 | API request completed", "37x currency | 9 |  |  |  | conversion successful" ]
+  },
+  "step4_injectPii" : {
+    "candidateValues" : 39,
+    "naturalByKey" : {
+      "demo.order.id" : 3,
+      "demo.shipping.tracking.id" : 3,
+      "session.id" : 5,
+      "transaction_id" : 3,
+      "user.id" : 5
+    },
+    "injectedByKey" : {
+      "demo.payment.card_number" : 3,
+      "session.id" : 5,
+      "user.email" : 3
+    },
+    "noMatchingLogByKey" : {
+      "session.id" : 139,
+      "user.id" : 31
+    },
+    "totalPii" : 30
+  },
+  "step5_size" : {
+    "outputRecords" : 341,
+    "distinctFields" : 107,
+    "chars" : 521441,
+    "estimatedTokensPassthrough" : 130361,
+    "maxInputTokens" : 250000
+  }
+}

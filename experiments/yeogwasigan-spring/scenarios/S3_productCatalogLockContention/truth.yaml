@@ -1,0 +1,6 @@
+# 정답지 — AI 에는 보내지 않는다. 필드 선택 알고리즘의 판정·단서 기준
+title: 상품 DB 잠김 (에러 없이 느려지기만 함)
+root_cause:
+  summary: '상품(product-catalog) DB 잠김, 에러 없이 느려지기만 함'
+# 1단계 단서 키워드 (scoring/scenarios.json 의 cause_hit_keywords ko+en). 한 줄 · 큰따옴표 목록으로 적는다
+cause_keywords: ["잠김", "락", "지연", "느려짐", "데드락", "lock", "locked", "contention", "slow", "latency", "deadlock"]

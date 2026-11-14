@@ -1,0 +1,6 @@
+# 정답지 — AI 에는 보내지 않는다. 필드 선택 알고리즘의 판정·단서 기준
+title: 특정 상품 하나만 조회 실패
+root_cause:
+  summary: '상품(product-catalog) 서비스의 특정 상품 하나만 조회 실패'
+# 1단계 단서 키워드 (scoring/scenarios.json 의 cause_hit_keywords ko+en). 한 줄 · 큰따옴표 목록으로 적는다
+cause_keywords: ["조회 실패", "찾을 수 없음", "단일 상품", "404", "not found", "404", "single item", "lookup failed"]

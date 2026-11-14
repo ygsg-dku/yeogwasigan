@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>목록 제안 · 여과시간</title>
+<style>
+  /* 게이트웨이 화면(gateway.html)과 같은 흑백. 넣음·남김은 반전, 안 넣음·뺌은 점선. */
+  :root {
+    --ink: #000; --paper: #fff; --g1: #f4f4f4; --g2: #d9d9d9; --g3: #8a8a8a; --g4: #555;
+    --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+    --mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, "D2Coding", monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--paper); color: var(--ink); overflow-x: hidden; }
+  html { scrollbar-color: var(--g3) var(--g1); }
+  body { font-family: var(--sans); font-size: 17px; line-height: 1.6; }
+  ::selection { background: var(--ink); color: var(--paper); }
+  a { color: inherit; text-underline-offset: 3px; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 24px 120px; display: grid; gap: 24px; }
+  header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px;
+           border-bottom: 3px solid var(--ink); padding-bottom: 12px; }
+  h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: -0.02em; }
+  h2 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
+  h3 { margin: 0; font-size: 18px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  h3 .n { font-family: var(--mono); font-size: 15px; border: 2px solid var(--ink); padding: 0 7px; }
+  h3 .how { font-size: 14px; font-weight: 600; color: var(--g4); }
+  .sub { color: var(--g4); font-size: 16px; }
+  .who { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .muted { color: var(--g4); font-size: 15px; }
+  button { font: inherit; font-weight: 700; border: 2px solid var(--ink); background: var(--paper); padding: 9px 16px; cursor: pointer; }
+  button.primary { background: var(--ink); color: var(--paper); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  input[type=text] { font: inherit; border: 1.5px solid var(--ink); padding: 8px 10px; }
+  button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, tr:focus-visible { outline: 3px solid var(--g3); outline-offset: 2px; }
+  .grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .card { border: 1.5px solid var(--ink); padding: 20px; display: grid; gap: 14px; min-width: 0; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .err { border: 2px solid var(--ink); background: var(--g1); padding: 10px 12px; font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 16px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--g2); vertical-align: top; }
+  th { font-size: 14px; color: var(--g4); font-weight: 600; border-bottom: 2px solid var(--ink); white-space: nowrap; }
+  #list td { white-space: nowrap; }
+  #list tr { cursor: pointer; }
+  #list tr.sel { background: var(--g1); }
+  td.f { font-family: var(--mono); font-size: 15px; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  tr.dim td { color: var(--g3); }
+  .st { font-size: 14px; font-weight: 700; padding: 2px 8px; border: 1px solid var(--ink); white-space: nowrap; }
+  .st.RUNNING { border-style: dashed; }
+  .st.APPROVED { background: var(--ink); color: var(--paper); }
+  .st.REJECTED, .st.FAILED { border-style: dashed; color: var(--g4); }
+  .tag { display: inline-block; font-size: 13.5px; font-weight: 700; padding: 1px 8px; border: 1.5px solid var(--ink); white-space: nowrap; }
+  .tag.on { background: var(--ink); color: var(--paper); }
+  .tag.off { border-style: dashed; color: var(--g4); border-color: var(--g3); }
+  details summary { cursor: pointer; color: var(--g4); font-size: 15px; }
+  pre { margin: 0; background: var(--g1); padding: 12px; font-family: var(--mono); font-size: 14px; overflow: auto; }
+
+  /* 깔때기 */
+  .flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 2px solid var(--ink); }
+  .flow li { padding: 12px 14px; border-left: 1px solid var(--g2); display: grid; gap: 2px; }
+  .flow li:first-child { border-left: 0; }
+  .flow b { font-size: 34px; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .flow li.wait b { color: var(--g2); }
+  .flow li.now { background: var(--ink); color: var(--paper); }
+  .flow li.now .muted { color: var(--g2); }
+  @media (max-width: 700px) { .flow { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+  /* 진행 기록 */
+  #log { display: grid; gap: 14px; }
+  .ev { display: grid; gap: 10px; animation: in .35s ease-out; }
+  @keyframes in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .ev { animation: none; } .bars .b { transition: none; } }
+  .note { border: 1.5px dashed var(--g3); padding: 10px 14px; color: var(--g4); font-size: 15px; }
+  .live { font-size: 15px; border: 1.5px solid var(--ink); padding: 6px 12px; justify-self: start; }
+  .trial { border: 1.5px solid var(--ink); padding: 14px 16px; display: grid; gap: 10px; }
+  .trial .head { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; justify-content: space-between; }
+  .trial .what { font-size: 18px; font-weight: 700; }
+  .trial .what code { font-family: var(--mono); font-size: 17px; }
+  .score { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .score small { font-size: 15px; font-weight: 600; color: var(--g4); }
+  .judges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .j { font-size: 14px; border: 1.5px solid var(--ink); padding: 2px 8px; white-space: nowrap; }
+  .j.s2 { background: var(--ink); color: var(--paper); }
+  .j.s0 { border-style: dashed; border-color: var(--g3); color: var(--g4); }
+  .quote { margin: 0; background: var(--g1); padding: 10px 14px; color: var(--g4); font-size: 15.5px; }
+  .bars .b { height: 14px; background: var(--ink); min-width: 2px; transform-origin: left; transform: scaleX(0); transition: transform .8s cubic-bezier(.16, 1, .3, 1); }
+  .bars .b.on { transform: scaleX(1); }
+  .bars td.barcell { width: 36%; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { font-family: var(--mono); font-size: 15px; border: 1.5px solid var(--ink); padding: 4px 10px; }
+  .chip small { font-family: var(--sans); color: var(--g4); margin-left: 6px; }
+  .final { border: 2px solid var(--ink); padding: 18px; display: grid; gap: 12px; }
+  .done { background: var(--ink); color: var(--paper); padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  .done a { font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>목록 제안</h1>
+      <div class="sub">원인이 밝혀진 지난 장애 로그로 필드 선택 알고리즘을 돌려 목적 템플릿 초안을 만들고, 승인하면 게이트웨이 목록에 등록한다.</div>
+    </div>
+    <div class="who">
+      <span>로그인: <b id="who">…</b></span>
+      <span id="roles" class="muted"></span>
+      <span id="demoSwitch" hidden style="gap: 6px; align-items: center"></span>
+      <a href="/gateway.html" class="muted">게이트웨이</a>
+    </div>
+  </header>
+
+  <div id="err" class="err" hidden></div>
+
+  <div class="grid">
+    <div style="display:grid; gap:24px; min-width:0">
+      <section class="card">
+        <h2>알고리즘 실행</h2>
+        <p class="muted" style="margin:0">입력: 원인이 밝혀진 지난 장애 로그 묶음(OTel 데모 · 고르는 장애 6개, 검증 장애 2개). 결과는 승인 전까지 쓰이지 않는다.</p>
+        <p class="muted" style="margin:0">1단계는 실제로 계산한다. 2~3단계(AI 분석·판정)는 <b>데모 모드</b>로, 같은 입력의 실제 실행 기록을 쓴다.</p>
+        <button class="primary" id="startBtn" type="button">목록 제안 받기</button>
+      </section>
+      <section class="card">
+        <h2>제안 목록</h2>
+        <div class="scroll"><table>
+          <thead><tr><th>제안</th><th>상태</th><th>요청</th><th class="num">칸</th></tr></thead>
+          <tbody id="list"><tr><td colspan="4" class="muted">아직 제안이 없습니다.</td></tr></tbody>
+        </table></div>
+      </section>
+    </div>
+
+    <section class="card" id="detail">
+      <h2>진행</h2>
+      <p class="muted">[목록 제안 받기]를 누르거나 목록에서 제안을 고르세요.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const short = (f) => String(f).replace(/^(resource|logRecord)\./, "").replace(/^attributes\./, "");
+const name = (f) => `<span title="${esc(f)}">${esc(short(f))}</span>`;
+const scen = (id) => String(id).split("_")[0];
+const STATUS = { RUNNING: "실행 중", READY: "승인 대기", APPROVED: "승인됨", REJECTED: "반려", FAILED: "실패" };
+const VERDICT = { "담기(문맥)": "문맥", "담기": "담기", "조건부": "조건부", "토큰화": "토큰화", "버림": "버림" };
+const xsrf = () => decodeURIComponent((document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/) || [])[1] || "");
+let me = { user: "", roles: [] }, current = null, seen = 0, poll = null, ctx = {};
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": xsrf(), ...(opts.headers || {}) } });
+  if (res.status === 401) { location.reload(); throw new Error("로그인이 필요합니다."); }
+  const body = res.headers.get("content-type")?.includes("json") ? await res.json() : null;
+  if (!res.ok) throw new Error(`${res.status} · ${body?.detail || res.statusText}`);
+  return body;
+}
+function showErr(e) { $("err").hidden = !e; $("err").textContent = e ? e.message : ""; }
+
+// ── 진행 기록 그리기 ──
+const head1 = `<thead><tr><th>칸</th><th>판정</th><th class="num">단서</th><th class="num">새 값</th><th class="num">누출</th><th class="num">연결</th></tr></thead>`;
+const row1 = (c, ai) => `<tr class="${c.verdict === "버림" ? "dim" : ""}"><td class="f">${name(c.field)}</td>
+  <td><span class="tag ${c.verdict === "버림" ? "off" : ""}">${VERDICT[c.verdict] || esc(c.verdict)}</span> ${ai ? '<span class="tag on">AI 확인</span>' : ""}</td>
+  <td class="num">${c.clue}</td><td class="num">${c.novel}</td><td class="num">${c.leak}</td><td class="num">${Number(c.link).toFixed(2)}</td></tr>`;
+// 답 속 제목·머리말은 인용하지 않는다
+const HEADING = /원인 분석|근거|다음과 같|^\s*\d+[.)]|(흐름|요약|분석)\s*$/;
+// 비교 대상(ref)보다 점수가 가장 많이 바뀐 장애의 답에서 원인을 말한 부분을 뽑는다
+function quote(rows, ref) {
+  const before = Object.fromEntries((ref || []).map((r) => [r.scenario, r.judge]));
+  const moved = (r) => Math.abs(r.judge - (before[r.scenario] ?? r.judge));
+  const best = [...rows].sort((a, b) => moved(b) - moved(a) || b.judge - a.judge)[0];
+  const raw = best.answer, from = Math.max(0, raw.indexOf("원인"));
+  const bold = [...raw.slice(from).matchAll(/\*\*([^*]{8,})\*\*/g)].find((m) => m[1].trim().length >= 12 && !HEADING.test(m[1]));
+  const clean = (s) => s.replace(/[#*`>|]+|-{2,}/g, " ").replace(/\s+/g, " ").trim();
+  const sentences = clean(raw).match(/[^.。!?]*원인[^.。!?]*[.。!?]?/g) || [];
+  const t = bold ? clean(bold[1]) : (sentences.find((s) => s.length >= 15 && !HEADING.test(s)) || clean(raw));
+  return `${esc(scen(best.scenario))}(${esc(ctx.titles?.[scen(best.scenario)] || "")}) AI 답 (${best.judge}점) — “${esc(t.replace(/^[\s:·–-]+/, "").slice(0, 220))}”`;
+}
+function setFlow(vals, now) {
+  const labels = ["로그의 모든 칸", "판정 통과", "AI로 확인할 후보", "넣어 보니 더 맞힘", "제안 목록"];
+  $("flow").innerHTML = labels.map((l, i) => `<li class="${vals[i] == null ? "wait" : ""} ${i === now ? "now" : ""}"><b>${vals[i] ?? "—"}</b><span class="muted">${l}</span></li>`).join("");
+}
+function append(html) {
+  $("log").insertAdjacentHTML("beforeend", `<div class="ev">${html}</div>`);
+  const el = $("log").lastElementChild;
+  if (poll) el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+  return el;
+}
+function render(ev) {
+  const d = ev.data;
+  if (ev.kind === "start") {
+    ctx.titles = Object.fromEntries(Object.entries(d.titles || {}).map(([k, v]) => [scen(k), v]));
+    const named = (ids) => ids.map((s) => `<b>${esc(scen(s))}</b> ${esc(ctx.titles[scen(s)] || "")}`).join(" · ");
+    append(`<h3><span class="n">0</span>입력</h3><div class="muted">고르는 장애: ${named(d.select)}</div><div class="muted">검증 장애: ${named(d.validate)}</div>`);
+  } else if (ev.kind === "stage1") {
+    const fields = d.fields, kept = fields.filter((f) => f.verdict !== "버림"), tried = new Set(d.tried);
+    const main = kept.filter((f) => tried.has(f.field) || f.verdict === "담기(문맥)" || f.verdict === "토큰화");
+    const rest = kept.filter((f) => !main.includes(f)), dropped = fields.filter((f) => f.verdict === "버림");
+    ctx = { titles: ctx.titles, demo: ctx.demo, requester: ctx.requester, all: fields.length, kept: kept.length, tried: tried.size, added: [], verdict: Object.fromEntries(fields.map((f) => [f.field, f.verdict])) };
+    setFlow([ctx.all, ctx.kept, ctx.tried], 2);
+    append(`<h3><span class="n">1</span>점수 매기기 <span class="how">AI 없음</span></h3>
+      <div class="live">실제로 계산함 · ${(d.elapsedMs / 1000).toFixed(1)}초 · 칸 ${fields.length}개</div>
+      <div class="scroll"><table>${head1}<tbody>${main.map((f) => row1(f, tried.has(f.field))).join("")}</tbody></table></div>
+      <details><summary>판정은 통과했지만 원인 단서가 없어 AI로 확인하지 않은 칸 ${rest.length}개</summary><div class="scroll"><table>${head1}<tbody>${rest.map((f) => row1(f, false)).join("")}</tbody></table></div></details>
+      <details><summary>버린 칸 ${dropped.length}개</summary><div class="scroll"><table>${head1}<tbody>${dropped.map((f) => row1(f, false)).join("")}</tbody></table></div></details>`);
+  } else if (ev.kind === "mode") {
+    append(`<h3><span class="n">2</span>하나씩 넣어 보기 · <span class="n">3</span>하나씩 빼 보기 <span class="how">AI 분석 + AI 판정</span></h3>
+      <p class="muted" style="margin:0">카드 하나 = 이 칸 목록으로 장애마다 AI에게 원인을 물은 한 번의 시험. 칸 하나는 장애 하나의 판정이다 —
+        <span class="j s2">2점</span> 서비스와 원인을 맞힘 · <span class="j">1점</span> 서비스만 맞힘 · <span class="j s0">0점</span> 틀림. 장애 이름은 칸에 마우스를 올리면 보인다.</p>
+      <div class="note">${esc(ev.title)}</div>`);
+  } else if (ev.kind === "trial") {
+    const rows = d.rows, sum = rows.reduce((a, r) => a + r.judge, 0), leak = rows.reduce((a, r) => a + r.leak, 0);
+    let title, ref = null;
+    if (!d.added && !ctx.base) { title = "기본 세트 (문맥 칸 + 가짜 번호로 바꾼 ID)"; ctx.base = rows; }
+    else if (!d.added) { title = "넣은 칸 합치기"; ctx.chosen = rows; setFlow([ctx.all, ctx.kept, ctx.tried, ctx.added.length], 3); }
+    else if (d.phase === "select") { title = `+ <code>${esc(short(d.added))}</code>`; ref = ctx.base; if (d.decision === "넣음") ctx.added.push(d.added); }
+    else { title = `− <code>${esc(short(d.added))}</code>`; ref = ctx.chosen; }
+    const delta = d.before == null ? "" : `<small> (${sum - d.before > 0 ? "+" : ""}${sum - d.before})</small>`;
+    append(`<div class="trial"><div class="head"><div class="what">${title}</div>
+      <div class="score">${d.before == null ? "" : `<small>${d.before} → </small>`}${sum}<small> / ${2 * rows.length}점</small>${delta}</div></div>
+      <div class="judges">${rows.map((r) => `<span class="j s${r.judge}" title="${esc(scen(r.scenario))} ${esc(ctx.titles?.[scen(r.scenario)] || "")} · ${["틀림", "서비스만 맞힘", "서비스와 원인 맞힘"][r.judge]}">${esc(scen(r.scenario))} ${r.judge}점</span>`).join("")}<span class="muted">· 누출 ${leak}</span></div>
+      <p class="quote">${quote(rows, ref)}</p>
+      ${d.decision ? `<div class="row"><span class="tag ${d.decision === "넣음" || d.decision === "남김" ? "on" : "off"}">${esc(d.decision)}</span> <span class="muted">${esc(d.why || "")}</span></div>` : ""}</div>`);
+  } else if (ev.kind === "validate") {
+    const vmax = 2 * d.validate.length, cmp = [["알고리즘 제안", d.final.fields.length, d.final.validateScore, d.final.validateLeak, true]];
+    if (d.hand?.fields?.length) cmp.push(["손으로 고른 목록", d.hand.fields.length, d.hand.validateScore, d.hand.validateLeak]);
+    if (d.compare && Object.keys(d.compare).length) {
+      cmp.push(["문맥 칸만", d.base.fields.length, d.compare.baseValidateScore, d.compare.baseValidateLeak]);
+      cmp.push(["전부 보냄 (그대로)", d.allFields, d.compare.passthroughValidateScore, d.compare.passthroughValidateLeak]);
+    }
+    const lmax = Math.max(1, ...cmp.map((r) => r[3]));
+    const el = append(`<h3><span class="n">4</span>처음 보는 장애로 검증 <span class="how">${d.validate.map(scen).join(" · ")} · 원인 ${vmax}점 만점 · 누출 = 숨겨 둔 가짜 민감값이 나간 개수</span></h3>
+      <div class="scroll"><table class="bars"><thead><tr><th>보낸 목록</th><th class="num">칸</th><th class="num">원인 점수</th><th class="num">누출</th><th class="barcell"></th></tr></thead><tbody>
+      ${cmp.map(([n, k, sc, lk, mine]) => `<tr><td>${mine ? `<b>${n}</b>` : n}</td><td class="num">${k}</td><td class="num">${sc} / ${vmax}</td><td class="num"><b>${lk}</b></td>
+        <td class="barcell"><div class="b" style="width:${(100 * lk / lmax).toFixed(1)}%"></div></td></tr>`).join("")}</tbody></table></div>`);
+    requestAnimationFrame(() => requestAnimationFrame(() => el.querySelectorAll(".b").forEach((b) => b.classList.add("on"))));
+  } else if (ev.kind === "ready") {
+    setFlow([ctx.all, ctx.kept, ctx.tried, (ctx.added || []).length, d.fields.length], 4);
+    append(`<div class="final"><h3>제안 목록 · ${d.fields.length}칸</h3>
+      <div class="chips">${d.fields.map((f) => `<span class="chip" title="${esc(f)}">${esc(short(f))}<small>${
+        ctx.verdict?.[f] === "토큰화" ? "가짜 번호로" : ctx.verdict?.[f] === "담기(문맥)" ? "문맥" : "AI 확인"}</small></span>`).join("")}</div>
+      <details><summary>목적 템플릿 초안 (YAML)</summary><pre>${esc(d.yaml)}</pre></details>
+      <div id="decideBox"></div></div>`);
+  } else if (ev.kind === "decision") {
+    append(d.purposeId
+      ? `<div class="done"><span>${esc(d.by)} 승인 · 게이트웨이 목록에 <b>${esc(d.name)}</b> 등록됨</span><a href="${useHref(d.purposeId)}">이 목록으로 장애 분석 요청하기 →</a></div>`
+      : `<div class="note">${esc(d.by)} 반려${d.comment ? " · 사유: " + esc(d.comment) : ""}</div>`);
+  } else if (ev.kind === "error") {
+    append(`<div class="err">실패: ${esc(d.message)}</div>`);
+  }
+}
+// 승인된 목록으로 게이트웨이 열기. 시연(demo)이면 제안한 요청자 계정으로 바꿔서 연다
+function useHref(purposeId) {
+  const to = "/gateway.html?purpose=" + encodeURIComponent(purposeId);
+  return ctx.demo && ctx.requester ? `/demo/switch?user=${encodeURIComponent(ctx.requester)}&to=${encodeURIComponent(to)}` : to;
+}
+function decideBox(p) {
+  const box = $("decideBox");
+  if (!box) return;
+  if (p.status !== "READY") { box.innerHTML = ""; return; }
+  const can = me.roles.includes("APPROVER") && p.requester !== me.user;
+  const why = !me.roles.includes("APPROVER") ? "승인자 권한이 없습니다. 승인자로 전환해 보세요." : p.requester === me.user ? "자기 제안은 승인할 수 없습니다." : "";
+  box.innerHTML = `<div class="row"><button class="primary" id="approveBtn" ${can ? "" : "disabled"}>승인하고 게이트웨이에 등록</button>
+    <input type="text" id="reason" placeholder="반려 사유" aria-label="반려 사유" ${can ? "" : "disabled"}>
+    <button id="rejectBtn" ${can ? "" : "disabled"}>반려</button><span class="muted">${why}</span></div>`;
+  if (can) {
+    $("approveBtn").onclick = () => decide(true);
+    $("rejectBtn").onclick = () => decide(false);
+  }
+}
+
+// ── 제안 열기 · 진행 받아 오기 ──
+async function open(id) {
+  clearInterval(poll); poll = null;
+  current = id; seen = 0; ctx = { added: [], demo: ctx.demo };
+  history.replaceState(null, "", "?id=" + encodeURIComponent(id));
+  $("detail").innerHTML = `<div class="row" style="justify-content:space-between"><h2>${esc(id)}</h2><span id="pst" class="st"></span></div>
+    <ol class="flow" id="flow"></ol><div id="log"></div>`;
+  setFlow([], -1);
+  await refresh();
+}
+async function refresh() {
+  const p = await api(`/api/proposals/${current}?since=${seen}`);
+  ctx.requester = p.requester;
+  for (const ev of p.events) render(ev);
+  seen += p.events.length;
+  $("pst").className = "st " + p.status;
+  $("pst").textContent = STATUS[p.status];
+  decideBox(p);
+  if (p.status === "RUNNING" && !poll) poll = setInterval(() => refresh().catch(showErr), 600);
+  if (p.status !== "RUNNING" && poll) { clearInterval(poll); poll = null; }
+  await loadList();
+}
+async function loadList() {
+  const rows = await api("/api/proposals");
+  $("list").innerHTML = rows.length ? rows.map((r) => `<tr tabindex="0" data-id="${r.id}" class="${r.id === current ? "sel" : ""}">
+      <td>${r.id}</td><td><span class="st ${r.status}">${STATUS[r.status]}</span></td><td>${esc(r.requester)}</td><td class="num">${r.fields.length || "—"}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="muted">아직 제안이 없습니다.</td></tr>`;
+  for (const tr of $("list").querySelectorAll("tr[data-id]")) {
+    tr.onclick = () => open(tr.dataset.id).catch(showErr);
+    tr.onkeydown = (e) => { if (e.key === "Enter") open(tr.dataset.id).catch(showErr); };
+  }
+}
+async function decide(approve) {
+  try {
+    $("approveBtn").disabled = $("rejectBtn").disabled = true;
+    await api(`/api/proposals/${current}/decision`, { method: "POST", body: JSON.stringify({ approve, comment: $("reason").value }) });
+    await refresh();
+  } catch (e) { showErr(e); await refresh().catch(() => {}); }
+}
+
+$("startBtn").onclick = async () => {
+  try {
+    showErr(null);
+    $("startBtn").disabled = true;
+    const p = await api("/api/proposals", { method: "POST" });
+    await open(p.id);
+  } catch (e) { showErr(e); } finally { $("startBtn").disabled = false; }
+};
+
+(async () => {
+  try {
+    me = await api("/api/gateway/me");
+    $("who").textContent = me.user;
+    $("roles").textContent = me.roles.join(", ");
+    // 시연(demo 프로파일)일 때만: 로그인 없이 계정 전환, 전환 뒤 이 화면으로 돌아온다
+    const demo = await fetch("/demo/users").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (demo) {
+      $("demoSwitch").innerHTML = "<span class=\"muted\">시연 전환</span>" + demo.map((u) => u === me.user
+        ? `<button type="button" class="primary" disabled>${esc(u)}</button>`
+        : `<button type="button" data-user="${esc(u)}">${esc(u)}</button>`).join("");
+      for (const b of $("demoSwitch").querySelectorAll("button[data-user]")) {
+        b.onclick = () => { location.href = `/demo/switch?user=${encodeURIComponent(b.dataset.user)}&to=${encodeURIComponent("/proposals.html" + location.search)}`; };
+      }
+      $("demoSwitch").hidden = false;
+      $("demoSwitch").style.display = "flex";
+      ctx.demo = true;
+    }
+    await loadList();
+    const id = new URLSearchParams(location.search).get("id") || document.querySelector("#list tr[data-id]")?.dataset.id;
+    if (id) await open(id);
+  } catch (e) { showErr(e); }
+})();
+</script>
+</body>
+</html>
